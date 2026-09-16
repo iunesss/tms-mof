@@ -6,7 +6,9 @@ import {
   formatDate,
   courseStatusText,
   logout,
-} from '../manage-courses/course-api.js';
+  setAgentIdentity,
+  loadNotificationsBadge,
+} from '../agent-api.js';
 
 const state = {
   page: 1,
@@ -17,18 +19,6 @@ function courseTypeText(type) {
   return type === 'MISSION' ? 'مهمة / بعثة' : 'دورة تدريبية';
 }
 
-function showMessage(message) {
-  const body = document.querySelector('#archiveCoursesTableBody');
-
-  body.innerHTML = `
-    <tr>
-      <td colspan="8" class="px-5 py-10 text-center text-xs text-rose-600">
-        ${escapeHtml(message)}
-      </td>
-    </tr>
-  `;
-}
-
 function buildQuery() {
   const params = new URLSearchParams({
     page: String(state.page),
@@ -37,12 +27,10 @@ function buildQuery() {
 
   const search = document.querySelector('#archiveSearch').value.trim();
   const courseType = document.querySelector('#archiveCourseType').value;
-  const status = document.querySelector('#archiveStatus').value;
   const year = document.querySelector('#archiveYear').value;
 
   if (search) params.set('search', search);
   if (courseType) params.set('courseType', courseType);
-  if (status) params.set('status', status);
   if (year) params.set('year', year);
 
   return params.toString();
@@ -55,13 +43,7 @@ function renderYears(years) {
   select.innerHTML = `
     <option value="">كل السنوات</option>
     ${years
-      .map(
-        (year) => `
-          <option value="${year}">
-            ${year}
-          </option>
-        `
-      )
+      .map((year) => `<option value="${year}">${year}</option>`)
       .join('')}
   `;
 
@@ -74,8 +56,8 @@ function renderCourses(courses) {
   if (!courses.length) {
     body.innerHTML = `
       <tr>
-        <td colspan="8" class="px-5 py-10 text-center text-xs text-slate-400">
-          لا توجد دورات أو مهام مطابقة للبحث.
+        <td colspan="7" class="px-5 py-10 text-center text-xs text-slate-400">
+          لا توجد دورات سابقة خاصة بقطاعك.
         </td>
       </tr>
     `;
@@ -87,7 +69,7 @@ function renderCourses(courses) {
       (course) => `
         <tr class="transition hover:bg-slate-50">
           <td class="px-5 py-3 font-semibold text-slate-700">
-            ${escapeHtml(course.course_no)}
+            ${escapeHtml(course.course_no || '—')}
           </td>
 
           <td class="px-5 py-3 font-bold text-slate-900">
@@ -95,11 +77,7 @@ function renderCourses(courses) {
           </td>
 
           <td class="px-5 py-3">
-            ${escapeHtml(courseTypeText(course.course_type))}
-          </td>
-
-          <td class="px-5 py-3">
-            ${escapeHtml(course.provider || '—')}
+            ${courseTypeText(course.course_type)}
           </td>
 
           <td class="px-5 py-3 text-slate-500">
@@ -108,21 +86,19 @@ function renderCourses(courses) {
             ${formatDate(course.end_date)}
           </td>
 
-          <td class="px-5 py-3">
-            ${Number(course.confirmed_count || 0)}
-            /
-            ${Number(course.candidates_count || 0)}
+          <td class="px-5 py-3 font-bold text-slate-700">
+            ${Number(course.sector_candidates_count || 0)}
           </td>
 
           <td class="px-5 py-3">
             <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
-              ${escapeHtml(courseStatusText(course.status))}
+              ${courseStatusText(course.status)}
             </span>
           </td>
 
           <td class="px-5 py-3">
             <a
-href="./manage-course.html?id=${encodeURIComponent(course.id)}"
+              href="./course-info.html?id=${encodeURIComponent(course.id)}"
               class="inline-block rounded-lg border border-brand-gold px-3 py-1.5 text-[11px] font-bold text-brand-darkGold transition hover:bg-brand-lightGold"
             >
               عرض التفاصيل
@@ -135,114 +111,111 @@ href="./manage-course.html?id=${encodeURIComponent(course.id)}"
 }
 
 function renderPagination(pagination) {
-  const safePagination = pagination || {
-    page: 1,
-    totalPages: 1,
-    total: 0,
-  };
+  const totalPages = pagination.totalPages || 1;
 
-  state.totalPages = safePagination.totalPages || 1;
+  state.totalPages = totalPages;
 
   document.querySelector('#archivedCoursesTotal').textContent =
-    `إجمالي النتائج: ${safePagination.total || 0}`;
+    `إجمالي النتائج: ${pagination.total || 0}`;
 
   document.querySelector('#archivePageInfo').textContent =
-    `صفحة ${safePagination.page} من ${state.totalPages}`;
+    `صفحة ${pagination.page} من ${totalPages}`;
 
   document.querySelector('#archivePaginationText').textContent =
-    `صفحة ${safePagination.page} من ${state.totalPages}`;
+    `صفحة ${pagination.page} من ${totalPages}`;
 
   document.querySelector('#previousArchivePageButton').disabled =
-    safePagination.page <= 1;
+    pagination.page <= 1;
 
   document.querySelector('#nextArchivePageButton').disabled =
-    safePagination.page >= state.totalPages;
+    pagination.page >= totalPages;
 }
 
 async function loadArchive() {
   try {
     const data = await api(
-      `/api/admin/reports/archive?${buildQuery()}`
+      `/api/agent/courses/archive?${buildQuery()}`
     );
 
     renderYears(data.years || []);
     renderCourses(data.courses || []);
-    renderPagination(data.pagination);
+    renderPagination(
+      data.pagination || {
+        page: 1,
+        totalPages: 1,
+        total: 0,
+      }
+    );
   } catch (error) {
-    showMessage(error.message || 'تعذر تحميل أرشيف الدورات.');
+    document.querySelector('#archiveCoursesTableBody').innerHTML = `
+      <tr>
+        <td colspan="7" class="px-5 py-10 text-center text-xs text-rose-600">
+          ${escapeHtml(error.message)}
+        </td>
+      </tr>
+    `;
   }
 }
 
 function clearFilters() {
   document.querySelector('#archiveSearch').value = '';
   document.querySelector('#archiveCourseType').value = '';
-  document.querySelector('#archiveStatus').value = '';
   document.querySelector('#archiveYear').value = '';
 
   state.page = 1;
   loadArchive();
 }
 
-document.querySelector('#searchArchiveButton').addEventListener('click', () => {
-  state.page = 1;
-  loadArchive();
-});
+async function initialize() {
+  const user = await protectPage(['AGENT']);
 
-document.querySelector('#clearArchiveFiltersButton').addEventListener(
-  'click',
-  clearFilters
-);
+  if (!user) return;
 
-document.querySelector('#previousArchivePageButton').addEventListener(
-  'click',
-  () => {
-    if (state.page > 1) {
+  setAgentIdentity(user);
+
+  document.querySelector('#logoutButton').addEventListener('click', logout);
+
+  document
+    .querySelector('#searchArchiveButton')
+    .addEventListener('click', () => {
+      state.page = 1;
+      loadArchive();
+    });
+
+  document
+    .querySelector('#clearArchiveFiltersButton')
+    .addEventListener('click', clearFilters);
+
+  document
+    .querySelector('#archiveSearch')
+    .addEventListener('keydown', (event) => {
+      if (event.key === 'Enter') {
+        event.preventDefault();
+        state.page = 1;
+        loadArchive();
+      }
+    });
+
+  document
+    .querySelector('#previousArchivePageButton')
+    .addEventListener('click', () => {
+      if (state.page <= 1) return;
       state.page -= 1;
       loadArchive();
-    }
-  }
-);
+    });
 
-document.querySelector('#nextArchivePageButton').addEventListener(
-  'click',
-  () => {
-    if (state.page < state.totalPages) {
+  document
+    .querySelector('#nextArchivePageButton')
+    .addEventListener('click', () => {
+      if (state.page >= state.totalPages) return;
       state.page += 1;
       loadArchive();
-    }
-  }
-);
+    });
 
-document.querySelector('#archiveSearch').addEventListener('keydown', (event) => {
-  if (event.key === 'Enter') {
-    event.preventDefault();
-    state.page = 1;
-    loadArchive();
-  }
-});
-
-const logoutButton = document.querySelector('#logoutButton');
-
-if (logoutButton) {
-  logoutButton.addEventListener('click', logout);
-}
-
-async function initialize() {
-  const session = await protectPage(['COURSE_MANAGER']);
-
-  if (!session) return;
-
-  const currentUserName = document.querySelector('#currentUserName');
-
-  if (currentUserName) {
-    currentUserName.textContent =
-      session.fullName ||
-      session.full_name ||
-      session.username ||
-      'مدير الدورة';
-  }
-
-  await loadArchive();
+  await Promise.all([
+    loadArchive(),
+    loadNotificationsBadge(),
+  ]);
 }
 
 initialize();

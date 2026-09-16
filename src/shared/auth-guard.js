@@ -4,41 +4,16 @@ const unauthorizedPage = '/src/login/unauthorized.html';
   يبدأ الانتقال من لحظة الضغط على الرابط.
   لذلك خروج الماوس بسرعة بعد الضغط لن يلغي التنقل.
 */
-document.addEventListener(
-  'pointerdown',
+document.addEventListener('pointerdown',
   (event) => {
     if (event.button !== 0) return;
 
     const link = event.target.closest('a[href]');
-
-    if (!link) return;
-
-    if (
-      link.target === '_blank' ||
-      link.hasAttribute('download') ||
-      event.ctrlKey ||
-      event.metaKey ||
-      event.shiftKey ||
-      event.altKey
-    ) {
-      return;
-    }
-
-    const url = new URL(link.href, window.location.href);
-
-    if (
-      url.origin !== window.location.origin ||
-      url.hash ||
-      url.href === window.location.href
-    ) {
-      return;
-    }
-
-    event.preventDefault();
-    window.location.assign(url.href);
-  },
-  true
+    const url = new URL(link.href, window.location.href);   
+    window.location.assign(url.href);   
+  }
 );
+
 let isLeavingPage = false;
 
 window.addEventListener('pagehide', () => {

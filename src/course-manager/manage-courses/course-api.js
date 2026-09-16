@@ -66,6 +66,6 @@ export async function logout() {
   try {
     await api('/api/auth/logout', { method: 'POST' });
   } finally {
-    window.location.replace('../../login/index.html');
+    window.location.replace('/src/login/index.html');
   }
 }

@@ -11,8 +11,13 @@ const adminUsersRoutes = require('./routes/admin.users.routes');
 const adminCoursesRoutes = require('./routes/admin.courses.routes');
 const adminReportsRoutes = require('./routes/admin.reports.routes');
 const courseManagerDashboardRoutes = require('./routes/course-manager.dashboard.routes');
-const courseManagerNotificationsRoutes = require('./routes/course-manager.notifications.routes'
-);
+const courseManagerNotificationsRoutes = require('./routes/course-manager.notifications.routes');
+const courseManagerUsersRoutes = require('./routes/course-manager.users.routes');
+const agentDashboardRoutes = require('./routes/agent.dashboard.routes');
+const agentCoursesRoutes = require('./routes/agent.courses.routes');
+
+
+
 
 
 const app = express();
@@ -49,6 +54,13 @@ app.use('/api/admin/courses', adminCoursesRoutes);
 app.use('/api/admin/reports', adminReportsRoutes);
 app.use('/api/course-manager/dashboard', courseManagerDashboardRoutes);
 app.use('/api/course-manager/notifications',courseManagerNotificationsRoutes);
+app.use('/api/course-manager/users',courseManagerUsersRoutes);
+app.use('/api/agent/dashboard',agentDashboardRoutes);
+app.use('/api/agent/courses',gentCoursesRoutes);
+
+
+
+
 app.use((req, res) => {
   res.status(404).json({
     message: 'المسار المطلوب غير موجود.',

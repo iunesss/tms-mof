@@ -81,7 +81,7 @@ function renderCandidates(candidates) {
 
   grid.innerHTML = candidates.map((candidate) => `
     <a
-href="../../admin/reports/employee-info.html?courseId=${courseId}&candidateId=${candidate.id}"
+href="./employee-info.html?courseId=${encodeURIComponent(courseId)}&candidateId=${encodeURIComponent(candidate.id)}"
       class="rounded-xl border border-slate-200 bg-white p-4 transition hover:border-brand-gold hover:shadow-sm"
     >
       <div class="flex items-center justify-between gap-3">
