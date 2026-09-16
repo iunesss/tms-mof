@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تسجيل الدخول | نظام إدارة الدورات</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.png">
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              gold: '#C9A227',
+              lightGold: '#FCF7E8',
+              darkGold: '#9E7E1B',
+              dark: '#18212B',
+            },
+          },
+        },
+      },
+    };
+  </script>
+</head>
+
+<body class="min-h-screen bg-slate-50 font-sans text-brand-dark">
+  <main class="flex min-h-screen items-center justify-center px-4 py-6">
+    <section class="w-full max-w-md rounded-xl border-t-4 border-brand-gold bg-white p-6 shadow-lg">
+      <header class="mb-6 text-center">
+        <div class="w-14 h-14 mx-auto mb-2.5 flex items-center justify-center bg-brand-lightGold rounded-full border border-brand-gold/30 overflow-hidden shadow-sm">
+          <img src="/favicon.png" alt="شعار الوزارة" class="w-full h-full object-contain opacity-90 hover:opacity-100 transition-opacity">
+        </div>
+
+        <h1 class="text-lg font-bold">بوابة إدارة الدورات</h1>
+        <p class="mt-1 text-xs text-slate-500">سجّل الدخول للوصول إلى حسابك</p>
+      </header>
+
+      <form id="loginForm" class="space-y-4" novalidate>
+        <div>
+          <label for="username" class="mb-1 block text-xs font-medium text-slate-700">
+            اسم المستخدم
+          </label>
+
+          <input
+            id="username"
+            name="username"
+            type="text"
+            autocomplete="username"
+            required
+            autofocus
+            placeholder="أدخل اسم المستخدم"
+            class="w-full rounded-lg border border-slate-300 px-3 py-2 text-xs transition focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+          />
+        </div>
+
+        <div>
+          <label for="password" class="mb-1 block text-xs font-medium text-slate-700">
+            كلمة المرور
+          </label>
+
+          <div class="relative">
+            <input
+              id="password"
+              name="password"
+              type="password"
+              autocomplete="current-password"
+              required
+              placeholder="أدخل كلمة المرور"
+              class="w-full rounded-lg border border-slate-300 py-2 pr-3 pl-10 text-xs transition focus:border-brand-gold focus:outline-none focus:ring-2 focus:ring-brand-gold/30"
+            />
+
+            <button
+              id="togglePassword"
+              type="button"
+              class="absolute inset-y-0 left-0 px-3 text-xs text-slate-500 hover:text-brand-dark"
+              aria-label="إظهار كلمة المرور"
+            >
+              إظهار
+            </button>
+          </div>
+        </div>
+
+        <label class="flex cursor-pointer items-center gap-2 text-xs text-slate-600">
+          <input
+            id="rememberMe"
+            name="rememberMe"
+            type="checkbox"
+            class="h-3.5 w-3.5 rounded border-slate-300 text-brand-gold focus:ring-brand-gold"
+          />
+          تذكرني على هذا الجهاز
+        </label>
+
+        <p
+          id="formMessage"
+          class="hidden rounded-lg border px-3 py-2 text-xs"
+          role="alert"
+          aria-live="polite"
+        ></p>
+
+        <button
+          id="submitButton"
+          type="submit"
+          class="flex w-full items-center justify-center gap-2 rounded-lg bg-brand-gold py-2.5 text-xs font-semibold text-white shadow-md transition hover:bg-brand-darkGold focus:outline-none focus:ring-4 focus:ring-brand-gold/30 disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          <span id="buttonText">تسجيل الدخول</span>
+          <span id="buttonLoader" class="hidden">...</span>
+        </button>
+      </form>
+
+      <p class="mt-4 text-center text-[11px] text-slate-500">
+        لا توجد خدمة إنشاء حسابات عامة.
+        <br />
+        في حال وجود مشكلة، تواصل مع إدارة النظام.
+      </p>
+    </section>
+  </main>
+
+  <script src="./script.js"></script>
+</body>
+</html>

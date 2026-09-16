@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>إنشاء دورة جديدة | مدير النظام</title>
+
+  <link rel="icon" type="image/png" href="/icon.png" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#18212B',
+              gold: '#C9A227',
+              darkGold: '#9E7E1B',
+              lightGold: '#FCF7E8',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    ::-webkit-scrollbar { display: none; }
+    html { scrollbar-width: none; }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-50 pt-16 text-slate-800">
+
+  <header class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-brand-navy text-white shadow-lg">
+    <div class="mx-auto flex h-16 max-w-[92%] items-center justify-between px-4 sm:px-6">
+      <a href="./main-courses.html" class="flex items-center gap-2.5">
+        <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-md">
+          <img src="/favicon.png" alt="شعار النظام" class="h-full w-full object-contain p-1" />
+        </div>
+
+        <div class="hidden sm:block">
+          <h1 class="text-xs font-bold">نظام إدارة الدورات</h1>
+          <p class="mt-0.5 text-[10px] text-slate-400">إنشاء دورة أو مهمة</p>
+        </div>
+      </a>
+
+      <a href="./main-courses.html" class="rounded-lg border border-slate-600 px-3 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
+        العودة إلى الدورات
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[92%] space-y-5 px-4 py-6 sm:px-6">
+
+    <section class="rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm">
+      <p class="text-[11px] text-slate-500">إدارة الدورات</p>
+      <h2 class="mt-0.5 text-lg font-bold text-slate-900">إنشاء دورة أو مهمة جديدة</h2>
+      <p class="mt-1 text-xs text-slate-500">
+        يمكن حفظها كمسودة، ثم تفعيلها عند اكتمال المعلومات.
+      </p>
+    </section>
+
+    <form id="createCourseForm" class="space-y-5">
+
+      <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 class="border-b border-slate-200 pb-3 text-sm font-bold text-slate-900">
+          المعلومات الأساسية
+        </h3>
+
+        <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <div>
+            <label for="courseType" class="mb-1.5 block text-xs font-semibold">
+              نوع السجل *
+            </label>
+
+            <select id="courseType" required class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs outline-none focus:border-brand-gold">
+              <option value="">اختر النوع</option>
+              <option value="TRAINING">دورة تدريبية</option>
+              <option value="MISSION">مهمة</option>
+            </select>
+          </div>
+
+          <div>
+            <label for="courseNumber" class="mb-1.5 block text-xs font-semibold">
+              رقم الدورة
+              <span class="font-normal text-slate-400">(اختياري)</span>
+            </label>
+
+            <input
+              id="courseNumber"
+              placeholder="مثال: TR-2026-001"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold"
+            />
+          </div>
+
+          <div>
+            <label for="courseStatus" class="mb-1.5 block text-xs font-semibold">
+              حالة الإنشاء
+            </label>
+
+            <select id="courseStatus" class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs outline-none focus:border-brand-gold">
+              <option value="DRAFT">مسودة</option>
+              <option value="ACTIVE">نشطة</option>
+            </select>
+          </div>
+
+          <div class="md:col-span-2 xl:col-span-3">
+            <label for="courseTitle" class="mb-1.5 block text-xs font-semibold">
+              اسم الدورة أو المهمة *
+            </label>
+
+            <input
+              id="courseTitle"
+              required
+              placeholder="اكتب اسم الدورة أو المهمة"
+              class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold"
+            />
+          </div>
+
+          <div class="md:col-span-2 xl:col-span-3">
+            <label for="courseDescription" class="mb-1.5 block text-xs font-semibold">
+              وصف الدورة أو المهمة
+            </label>
+
+            <textarea
+              id="courseDescription"
+              rows="3"
+              placeholder="وصف مختصر لأهداف الدورة أو المهمة"
+              class="w-full resize-none rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold"
+            ></textarea>
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 class="border-b border-slate-200 pb-3 text-sm font-bold text-slate-900">
+          المكان والمدة والجهة المنفذة
+        </h3>
+
+        <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label for="providerName" class="mb-1.5 block text-xs font-semibold">الجهة التدريبية</label>
+            <input id="providerName" placeholder="اسم الجهة المنفذة" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
+          </div>
+
+          <div>
+            <label for="country" class="mb-1.5 block text-xs font-semibold">الدولة</label>
+            <input id="country" placeholder="مثال: اليمن" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
+          </div>
+
+          <div>
+            <label for="city" class="mb-1.5 block text-xs font-semibold">المدينة</label>
+            <input id="city" placeholder="مثال: عدن" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
+          </div>
+
+          <div>
+            <label for="totalSeats" class="mb-1.5 block text-xs font-semibold">إجمالي المقاعد</label>
+            <input id="totalSeats" type="number" min="1" placeholder="0" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
+          </div>
+
+          <div>
+            <label for="startDate" class="mb-1.5 block text-xs font-semibold">تاريخ البداية *</label>
+            <input id="startDate" type="date" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
+          </div>
+
+          <div>
+            <label for="endDate" class="mb-1.5 block text-xs font-semibold">تاريخ النهاية *</label>
+            <input id="endDate" type="date" required class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
+          </div>
+
+          <div id="nominationDeadlineGroup">
+            <label for="nominationDeadline" class="mb-1.5 block text-xs font-semibold">آخر موعد للترشيح</label>
+            <input id="nominationDeadline" type="date" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
+          </div>
+        </div>
+      </section>
+
+      <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <h3 class="border-b border-slate-200 pb-3 text-sm font-bold text-slate-900">
+          أجندة ومرفقات الدورة
+        </h3>
+
+        <p class="mt-3 text-[11px] text-slate-500">
+          هذه مرفقات الدورة العامة، وليست مستندات المرشحين.
+        </p>
+
+        <div class="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <div>
+            <label for="agendaFile" class="mb-1.5 block text-xs font-semibold">الأجندة</label>
+            <input id="agendaFile" type="file" accept=".pdf,.doc,.docx" class="block w-full text-xs text-slate-500" />
+          </div>
+
+          <div>
+            <label for="programFile" class="mb-1.5 block text-xs font-semibold">برنامج الدورة</label>
+            <input id="programFile" type="file" accept=".pdf,.doc,.docx" class="block w-full text-xs text-slate-500" />
+          </div>
+
+          <div>
+            <label for="invitationTemplateFile" class="mb-1.5 block text-xs font-semibold">نموذج دعوة</label>
+            <input id="invitationTemplateFile" type="file" accept=".pdf,.doc,.docx" class="block w-full text-xs text-slate-500" />
+          </div>
+
+          <div>
+            <label for="courseAttachmentFile" class="mb-1.5 block text-xs font-semibold">مرفق إضافي</label>
+            <input id="courseAttachmentFile" type="file" class="block w-full text-xs text-slate-500" />
+          </div>
+        </div>
+        <div class="mt-6 border-t border-slate-200 pt-5">
+  <div class="flex items-start justify-between gap-4">
+    <div>
+      <h4 class="text-xs font-bold text-slate-900">
+        استمارات مطلوبة من المرشحين
+      </h4>
+
+      <p class="mt-1 text-[11px] text-slate-500">
+        يحمّل المرشح الاستمارة، يعبئها، ثم يرفع نسخة ممسوحة للمراجعة.
+      </p>
+    </div>
+
+    <button
+      id="addCourseFormButton"
+      type="button"
+      class="shrink-0 rounded-lg border border-brand-gold px-3 py-2 text-xs font-bold text-brand-darkGold"
+    >
+      + إضافة استمارة
+    </button>
+  </div>
+
+  <div id="courseFormsContainer" class="mt-4 space-y-3"></div>
+</div>
+      </section>
+
+      <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">الأقسام والمقاعد</h3>
+
+            <p id="allocationsDescription" class="mt-1 text-[11px] text-slate-500">
+              حدّد القسم وعدد المقاعد. عند تفعيل الدورة التدريبية، سيرسل النظام الدعوة إلى وكيل قطاع القسم.
+            </p>
+          </div>
+
+          <button id="addAllocationButton" type="button" class="rounded-lg border border-brand-gold px-3 py-2 text-xs font-bold text-brand-darkGold">
+            + إضافة قسم
+          </button>
+        </div>
+
+        <div id="courseAllocationsContainer" class="mt-4 space-y-3">
+          <p class="rounded-lg bg-slate-50 px-4 py-3 text-xs text-slate-500">
+            أضف قسمًا وحدد عدد المقاعد المخصصة له.
+          </p>
+        </div>
+      </section>
+
+      <div class="flex flex-wrap justify-end gap-2.5">
+        <a href="./main-courses.html" class="rounded-lg border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-600">
+          إلغاء
+        </a>
+
+        <button type="submit" class="rounded-lg bg-brand-gold px-5 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-brand-darkGold">
+          حفظ الدورة
+        </button>
+      </div>
+    </form>
+  </main>
+
+  <script type="module" src="./create.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+  <title>دخول غير مصرح | بوابة إدارة الدورات</title>
+  <link rel="icon" type="image/svg+xml" href="/icon.png">
+
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              gold: '#C9A227',
+              lightGold: '#FCF7E8',
+              darkGold: '#9E7E1B',
+              dark: '#18212B',
+            },
+          },
+        },
+      },
+    };
+  </script>
+</head>
+
+<body class="min-h-screen bg-gray-50 flex items-center justify-center text-brand-dark font-sans antialiased px-4">
+  
+  <main class="w-full max-w-md">
+    <!-- الكارد الرئيسي للخطأ -->
+    <section class="relative overflow-hidden rounded-2xl border border-brand-gold/30 bg-white shadow-lg shadow-gray-200/70">
+      
+      <!-- شريط علوي ذهبي -->
+      <div class="h-2.5 bg-brand-gold"></div>
+
+      <div class="p-6 text-center sm:p-8">
+        <!-- أيقونة التحذير -->
+        <div class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-full border border-red-500/40 bg-red-50 text-4xl shadow-inner shadow-red-50/50">
+          ⛔
+        </div>
+
+        <!-- تصنيف الخطأ باللون الذهبي -->
+        <p class="mb-1 text-xs font-bold uppercase tracking-wider text-brand-gold">تنبيه أمني</p>
+
+        <!-- العنوان الرئيسي للخطأ -->
+        <h1 class="text-xl font-bold text-brand-dark sm:text-2xl tracking-tight">
+          دخول غير مصرح به
+        </h1>
+
+        <!-- وصف الخطأ -->
+        <p class="mt-3 leading-6 text-gray-600 text-xs sm:text-sm">
+          عذراً، حسابك لا يملك الصلاحيات اللازمة للوصول إلى هذه الصفحة. 
+          تم حجب الوصول لضمان سلامة وسرية بيانات النظام.
+        </p>
+
+        <!-- أزرار الإجراءات -->
+        <div class="mt-6 flex flex-col gap-2.5 sm:flex-row sm:justify-center">
+          
+          <!-- زر العودة -->
+          <button
+            id="backToDashboard"
+            class="rounded-lg bg-brand-gold px-5 py-2.5 font-semibold text-white text-center transition hover:bg-brand-darkGold active:scale-[0.98] shadow-sm shadow-brand-gold/25 text-xs"
+          >
+            العودة إلى لوحة التحكم
+          </button>
+
+          <!-- زر تسجيل الخروج -->
+          <button
+            id="logoutButton"
+            class="rounded-lg border border-red-200 bg-white px-5 py-2.5 font-semibold text-red-600 text-center transition hover:bg-red-50 hover:border-red-300 focus:ring-2 focus:ring-red-200 focus:outline-none text-xs"
+          >
+            تسجيل الخروج
+          </button>
+        </div>
+      </div>
+
+      <!-- تذييل الكارد -->
+      <div class="px-6 py-3 bg-gray-100/70 text-[11px] text-gray-500 text-center border-t border-gray-200">
+        رمز الخطأ: 403 Forbidden - رقم التعريف: <span id="errorId" class="font-mono">UA-LOGIN-PROTECT</span>
+      </div>
+    </section>
+    
+    <!-- علامة تجارية صغيرة أسفل الصفحة -->
+    <footer class="mt-8 text-center text-xs text-gray-400">
+      نظام إدارة الدورات © 2026 - وزارة الخدمة المدنية والتأمينات
+    </footer>
+  </main>
+
+  <script type="module" src="/src/login/unauthorized.js"></script>
+</body>
+</html>

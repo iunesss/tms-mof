@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>بيانات الموظف</title>
+  <link rel="icon" type="image/png" href="/icon.png" />
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = { theme: { extend: { colors: { brand: {
+      navy: '#18212B', gold: '#C9A227', darkGold: '#9E7E1B', lightGold: '#FCF7E8'
+    } } } } };
+  </script>
+</head>
+
+<body class="min-h-screen bg-slate-50 pt-16 text-slate-800">
+  <header class="fixed inset-x-0 top-0 z-50 bg-brand-navy text-white shadow-lg">
+    <div class="mx-auto flex h-16 max-w-[92%] items-center justify-between px-4">
+      <a id="backLink" href="./archive.html" class="flex items-center gap-2">
+        <img src="/favicon.png" class="h-9 w-9 rounded-lg bg-white p-1" alt="الشعار" />
+        <div>
+          <p class="text-xs font-bold">نظام إدارة الدورات</p>
+          <p class="text-[10px] text-slate-400">بيانات الموظف</p>
+        </div>
+      </a>
+      <a id="backButton" href="./archive.html" class="rounded-lg border border-slate-600 px-3 py-1.5 text-[11px]">العودة للدورة</a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[92%] space-y-5 px-4 py-6">
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <p id="courseName" class="text-[11px] text-slate-500">جارٍ تحميل الدورة...</p>
+      <div class="mt-2 flex flex-wrap items-center gap-2">
+        <h1 id="employeeName" class="text-xl font-bold">جارٍ تحميل بيانات الموظف...</h1>
+        <span id="candidateStatus" class="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold">—</span>
+      </div>
+      <p id="employeeNumber" class="mt-2 text-xs text-slate-500">—</p>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="border-b pb-3 text-sm font-bold">البيانات وقت الاختيار</h2>
+      <dl class="mt-5 grid gap-5 text-xs sm:grid-cols-2 xl:grid-cols-4">
+        <div><dt class="text-slate-400">القسم</dt><dd id="department" class="mt-1 font-bold">—</dd></div>
+        <div><dt class="text-slate-400">القطاع</dt><dd id="sector" class="mt-1 font-bold">—</dd></div>
+        <div><dt class="text-slate-400">المسمى الوظيفي</dt><dd id="jobTitle" class="mt-1 font-bold">—</dd></div>
+        <div><dt class="text-slate-400">البريد الإلكتروني</dt><dd id="email" class="mt-1 font-bold">—</dd></div>
+        <div><dt class="text-slate-400">رقم الهاتف</dt><dd id="phone" class="mt-1 font-bold">—</dd></div>
+        <div><dt class="text-slate-400">تاريخ الاختيار</dt><dd id="selectedAt" class="mt-1 font-bold">—</dd></div>
+      </dl>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="border-b pb-3 text-sm font-bold">الاستمارات التي رفعها الموظف</h2>
+      <div id="formsList" class="mt-4 text-xs text-slate-500">جارٍ التحميل...</div>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h2 class="border-b pb-3 text-sm font-bold">مستندات الملف الشخصي</h2>
+      <div id="profileDocumentsList" class="mt-4 text-xs text-slate-500">جارٍ التحميل...</div>
+    </section>
+  </main>
+
+  <script type="module" src="./employee-info.js"></script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>تفاصيل المرشح | مدير النظام</title>
+
+  <link rel="icon" type="image/png" href="/icon.png" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#18212B',
+              gold: '#C9A227',
+              darkGold: '#9E7E1B',
+              lightGold: '#FCF7E8',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <style>
+    ::-webkit-scrollbar {
+      display: none;
+    }
+
+    html {
+      scrollbar-width: none;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen bg-slate-50 pt-16 text-slate-800">
+
+  <!-- شريط علوي بسيط -->
+  <header class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-brand-navy text-white shadow-lg">
+    <div class="mx-auto flex h-16 max-w-[92%] items-center justify-between px-4 sm:px-6">
+
+<a id="backToCourseLink" href="./manage-course.html" class="flex items-center gap-2.5">
+          <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-md">
+          <img
+            src="/favicon.png"
+            alt="شعار النظام"
+            class="h-full w-full object-contain p-1"
+          />
+        </div>
+
+        <div class="hidden sm:block">
+          <h1 class="text-xs font-bold">نظام إدارة الدورات</h1>
+          <p class="mt-0.5 text-[10px] text-slate-400">تفاصيل المرشح</p>
+        </div>
+      </a>
+
+      <a
+        id="backToCourseButton"
+href="./manage-course.html"
+        class="rounded-lg border border-slate-600 px-3 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold"
+      >
+        العودة إلى الدورة
+      </a>
+    </div>
+  </header>
+
+  <main class="mx-auto max-w-[92%] space-y-5 px-4 py-6 sm:px-6">
+
+    <!-- رأس المرشح -->
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+
+        <div>
+          <p id="courseName" class="text-[11px] text-slate-500">
+            جارٍ تحميل الدورة...
+          </p>
+
+          <div class="mt-2 flex flex-wrap items-center gap-2">
+            <h2 id="candidateName" class="text-lg font-bold text-slate-900">
+              جارٍ تحميل بيانات المرشح...
+            </h2>
+
+            <span
+              id="candidateStatusBadge"
+              class="rounded-lg bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-600"
+            >
+              —
+            </span>
+          </div>
+
+          <p id="candidateEmployeeNumber" class="mt-2 text-xs text-slate-500"></p>
+        </div>
+
+        <div class="flex flex-wrap gap-2">
+          <button
+            id="preliminaryAcceptButton"
+            type="button"
+            class="rounded-lg bg-emerald-600 px-3.5 py-2 text-xs font-bold text-white transition hover:bg-emerald-700"
+          >
+            قبول مبدئي
+          </button>
+
+          <button
+            id="confirmCandidateButton"
+            type="button"
+            class="rounded-lg bg-brand-gold px-3.5 py-2 text-xs font-bold text-white transition hover:bg-brand-darkGold"
+          >
+            تأكيد المرشح
+          </button>
+
+          <button
+            id="finalRejectCandidateButton"
+            type="button"
+            class="rounded-lg border border-rose-300 px-3.5 py-2 text-xs font-bold text-rose-700 transition hover:bg-rose-50"
+          >
+            رفض نهائي
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- بيانات Snapshot -->
+    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <div class="border-b border-slate-200 pb-3">
+        <h3 class="text-sm font-bold text-slate-900">بيانات المرشح وقت الترشح</h3>
+        <p class="mt-1 text-[11px] text-slate-500">
+          هذه البيانات محفوظة تاريخيًا ولا تتغير إذا تغير ملف الموظف لاحقًا.
+        </p>
+      </div>
+
+      <dl class="mt-5 grid gap-5 text-xs sm:grid-cols-2 xl:grid-cols-4">
+        <div>
+          <dt class="text-slate-400">الاسم الكامل</dt>
+          <dd id="snapshotFullName" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-slate-400">الرقم الوظيفي</dt>
+          <dd id="snapshotEmployeeNumber" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-slate-400">القسم</dt>
+          <dd id="snapshotDepartment" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-slate-400">القطاع</dt>
+          <dd id="snapshotSector" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-slate-400">المسمى الوظيفي</dt>
+          <dd id="snapshotJobTitle" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-slate-400">البريد الإلكتروني</dt>
+          <dd id="snapshotEmail" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-slate-400">رقم الهاتف</dt>
+          <dd id="snapshotPhone" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+
+        <div>
+          <dt class="text-slate-400">تاريخ اختيار المرشح</dt>
+          <dd id="candidateSelectedAt" class="mt-1 font-bold text-slate-800">—</dd>
+        </div>
+      </dl>
+    </section>
+
+    <!-- مستندات خاصة بالدورة -->
+    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h3 class="text-sm font-bold text-slate-900">مستندات المرشح الخاصة بالدورة</h3>
+        <p class="mt-1 text-[11px] text-slate-500">
+          عند وجود خطأ في مستند، استخدم «طلب إعادة رفع» ولا ترفض المرشح بالكامل.
+        </p>
+      </div>
+
+      <div class="overflow-x-auto">
+        <table class="w-full min-w-[1000px] text-right text-xs">
+          <thead class="border-b border-slate-200 bg-slate-50 text-slate-500">
+            <tr>
+              <th class="px-5 py-3 font-medium">المستند المطلوب</th>
+              <th class="px-5 py-3 font-medium">آخر إصدار</th>
+              <th class="px-5 py-3 font-medium">تاريخ الرفع</th>
+              <th class="px-5 py-3 font-medium">الحالة</th>
+              <th class="px-5 py-3 font-medium">ملاحظة المراجعة</th>
+              <th class="px-5 py-3 font-medium">الإجراء</th>
+            </tr>
+          </thead>
+
+          <tbody id="candidateDocumentsTableBody" class="divide-y divide-slate-100">
+            <tr>
+              <td colspan="6" class="px-5 py-8 text-center text-xs text-slate-400">
+                جارٍ تحميل مستندات المرشح...
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- نماذج الدورة -->
+    <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h3 class="text-sm font-bold text-slate-900">نماذج الدورة المعبأة</h3>
+        <p class="mt-1 text-[11px] text-slate-500">
+          النماذج التي حمّلها الموظف بعد تعبئتها ومسحها.
+        </p>
+      </div>
+
+      <div id="candidateFormsList" class="p-5 text-xs text-slate-500">
+        جارٍ تحميل نماذج الدورة...
+      </div>
+    </section>
+
+    <!-- الوثائق الثابتة للموظف -->
+    <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h3 class="text-sm font-bold text-slate-900">مستندات الملف الشخصي</h3>
+        <p class="mt-1 text-[11px] text-slate-500">
+          مثل الجواز والصورة الشخصية. عند طلب إعادة رفع الجواز يصل إشعار للموظف نفسه.
+        </p>
+      </div>
+
+      <div id="profileDocumentsList" class="p-5 text-xs text-slate-500">
+        جارٍ تحميل مستندات الملف الشخصي...
+      </div>
+    </section>
+
+    <!-- سجل الحالات -->
+    <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h3 class="text-sm font-bold text-slate-900">سجل حالة المرشح</h3>
+        <p class="mt-1 text-[11px] text-slate-500">
+          توثيق جميع التحولات، من الاختيار إلى القبول أو التأكيد أو الرفض النهائي.
+        </p>
+      </div>
+
+      <div id="candidateStatusHistory" class="p-5 text-xs text-slate-500">
+        جارٍ تحميل سجل الحالة...
+      </div>
+    </section>
+  </main>
+
+  <!-- نافذة الرفض النهائي -->
+  <div
+    id="finalRejectModal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4"
+  >
+    <div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+      <h3 class="text-sm font-bold text-slate-900">رفض المرشح نهائيًا</h3>
+
+      <p class="mt-2 text-xs leading-6 text-slate-500">
+        هذا قرار نهائي من اللجنة. لا تستخدمه بسبب مستند يحتاج تعديلًا أو إعادة رفع.
+      </p>
+
+      <textarea
+        id="finalRejectionReason"
+        rows="4"
+        class="mt-4 w-full resize-none rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold"
+        placeholder="سبب الرفض النهائي للمرشح"
+      ></textarea>
+
+      <p
+        id="finalRejectModalError"
+        class="mt-3 hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+      ></p>
+
+      <div class="mt-4 flex justify-end gap-2">
+        <button
+          id="closeFinalRejectModalButton"
+          type="button"
+          class="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600"
+        >
+          إلغاء
+        </button>
+
+        <button
+          id="confirmFinalRejectButton"
+          type="button"
+          class="rounded-lg bg-rose-600 px-4 py-2 text-xs font-bold text-white transition hover:bg-rose-700"
+        >
+          تأكيد الرفض النهائي
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- نافذة طلب إعادة رفع مستند -->
+  <div
+    id="resubmissionModal"
+    class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4"
+  >
+    <div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">
+      <h3 class="text-sm font-bold text-slate-900">طلب إعادة رفع مستند</h3>
+
+      <p class="mt-2 text-xs leading-6 text-slate-500">
+        سيصل إشعار إلى الموظف يوضح الملاحظة، ويبقى المرشح ضمن مسار الدورة.
+      </p>
+
+      <textarea
+        id="resubmissionReason"
+        rows="4"
+        class="mt-4 w-full resize-none rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold"
+        placeholder="مثال: صورة جواز السفر غير واضحة، يرجى إعادة الرفع."
+      ></textarea>
+
+      <p
+        id="resubmissionModalError"
+        class="mt-3 hidden rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700"
+      ></p>
+
+      <div class="mt-4 flex justify-end gap-2">
+        <button
+          id="closeResubmissionModalButton"
+          type="button"
+          class="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600"
+        >
+          إلغاء
+        </button>
+
+        <button
+          id="confirmResubmissionButton"
+          type="button"
+          class="rounded-lg bg-brand-gold px-4 py-2 text-xs font-bold text-white transition hover:bg-brand-darkGold"
+        >
+          إرسال طلب إعادة الرفع
+        </button>
+      </div>
+    </div>
+  </div>
+
+<script type="module" src="./manage-candidate.js"></script>
+</body>
+</html>

@@ -1,0 +1,311 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate" />
+
+  <title>لوحة التحكم | مدير النظام</title>
+  <link rel="icon" type="image/png" href="/icon.png" />
+
+  <script src="https://cdn.tailwindcss.com"></script>
+<style>
+    /* إخفاء شريط التمرير مع الحفاظ على إمكانية التمرير */
+    ::-webkit-scrollbar {
+      display: none;
+    }
+    html {
+      scrollbar-width: none;
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              navy: '#18212B',
+              gold: '#C9A227',
+              darkGold: '#9E7E1B',
+              lightGold: '#FCF7E8',
+            },
+          },
+        },
+      },
+    };
+  </script>
+
+  <script type="module">
+
+  </script>
+</head>
+
+<body class="min-h-screen bg-slate-50 text-slate-800 pt-16">
+
+  <!-- Navigation ثابتة -->
+  <nav class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-brand-navy text-white shadow-lg">
+    <div class="mx-auto flex h-16 max-w-[92%] items-center justify-between gap-5 px-4 sm:px-6">
+
+      <a href="./dashboard.html" class="flex shrink-0 items-center gap-2.5">
+        <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-md">
+          <img
+        src="/favicon.png"            
+        alt="شعار نظام إدارة الدورات"
+            class="h-full w-full object-contain p-1"
+          />
+        </div>
+
+        <div class="hidden sm:block">
+          <h1 class="text-xs font-bold">نظام إدارة الدورات</h1>
+          <p class="mt-0.5 text-[10px] text-slate-400">بوابة الإدارة المركزية</p>
+        </div>
+      </a>
+
+      <div class="hidden items-center gap-1 lg:flex ">
+        <a
+          href="./dashboard.html"
+          class="rounded-lg border border-brand-gold/40 bg-brand-gold/15 px-3 py-1.5 text-xs font-semibold text-brand-gold outline-none focus:ring-0 focus:outline-none"
+        >
+          لوحة التحكم
+        </a>
+
+        <a
+          href="./manage-users/manage-users.html"
+          class="rounded-lg px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10 hover:text-white outline-none focus:ring-0 focus:outline-none"
+        >
+          👥 إدارة المستخدمين
+        </a>
+
+        <a
+          href="./manage-courses/main-courses.html"
+          class="rounded-lg px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10 hover:text-white outline-none focus:ring-0 focus:outline-none"
+        >
+          📚 إدارة الدورات
+        </a>
+
+        <a
+          href="./reports/main-reports.html"
+          class="rounded-lg px-3 py-1.5 text-xs text-slate-300 transition hover:bg-white/10 hover:text-white outline-none focus:ring-0 focus:outline-none"
+        >
+          🛡️ السجلات والتقارير
+        </a>
+      </div>
+
+      <div class="flex shrink-0 items-center gap-2.5">
+        <div class="hidden rounded-lg bg-white/5 px-2.5 py-1.5 sm:block">
+          <p class="text-[11px] font-semibold">مدير النظام</p>
+          <p class="mt-0.5 text-[10px] text-slate-400">Super Admin</p>
+        </div>
+
+        <span class="hidden h-2 w-2 rounded-full bg-emerald-400 sm:block"></span>
+
+        <button
+          id="logoutButton"
+          type="button"
+          class="rounded-lg border border-red-400/30 px-2.5 py-1.5 text-[11px] font-semibold text-red-300 transition hover:bg-red-500/10"
+        >
+          تسجيل الخروج
+        </button>
+      </div>
+    </div>
+
+    <!-- Navigation للهاتف -->
+    <div class="border-t border-white/10 px-4 py-2 lg:hidden">
+      <div class="flex gap-2 overflow-x-auto whitespace-nowrap">
+        <a href="./dashboard.html" class="rounded-lg bg-brand-gold px-2.5 py-1.5 text-[11px] font-bold">
+          لوحة التحكم
+        </a>
+        <a href="./manage-users/manage-users.html" class="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px]">
+          المستخدمون
+        </a>
+        <a href="./manage-courses/main-courses.html" class="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px]">
+          الدورات
+        </a>
+        <a href="./reports/main-reports.html" class="rounded-lg bg-white/10 px-2.5 py-1.5 text-[11px]">
+          السجلات
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="mx-auto max-w-[92%] space-y-5 px-4 py-6 sm:px-6">
+
+    <section class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+      <div>
+        <div class="mb-1.5 flex items-center gap-2">
+          <span class="h-2 w-2 rounded-full bg-emerald-500"></span>
+          <span class="text-[11px] font-semibold text-emerald-700">جلسة نشطة</span>
+        </div>
+
+        <h2 class="text-lg font-bold text-slate-900">مرحبًا بك، مدير النظام</h2>
+        <p class="mt-1 text-xs text-slate-500">
+          نظرة شاملة على النظام والمستخدمين وسجل النشاط الإداري.
+        </p>
+      </div>
+
+      <div id="currentDate" class="w-fit rounded-lg border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-600">
+        جارٍ تحميل التاريخ...
+      </div>
+    </section>
+
+    <!-- Cards -->
+    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+
+      <article class="rounded-xl border-t-4 border-blue-500 bg-white p-4 shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500">إجمالي المستخدمين</p>
+            <p id="totalUsers" class="mt-2 text-2xl font-bold text-slate-900">—</p>
+          </div>
+          <div class="rounded-lg bg-blue-50 p-2.5 text-lg text-blue-600">👥</div>
+        </div>
+        <a href="./manage-users/manage-users.html" class="mt-3 inline-block text-[11px] font-semibold text-blue-600 hover:underline">
+          إدارة المستخدمين
+        </a>
+      </article>
+
+      <article class="rounded-xl border-t-4 border-brand-gold bg-white p-4 shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500">الدورات والمهام النشطة</p>
+            <p id="activeCourses" class="mt-2 text-2xl font-bold text-slate-900">—</p>
+          </div>
+          <div class="rounded-lg bg-brand-lightGold p-2.5 text-lg text-brand-darkGold">📚</div>
+        </div>
+        <a href="./manage-courses/main-courses.html" class="mt-3 inline-block text-[11px] font-semibold text-brand-darkGold hover:underline">
+          إدارة الدورات
+        </a>
+      </article>
+
+      <article class="rounded-xl border-t-4 border-red-500 bg-white p-4 shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500">الحسابات الموقوفة</p>
+            <p id="inactiveUsers" class="mt-2 text-2xl font-bold text-slate-900">—</p>
+          </div>
+          <div class="rounded-lg bg-red-50 p-2.5 text-lg text-red-600">⊘</div>
+        </div>
+        <a href="./manage-users/manage-users.html?status=inactive" class="mt-3 inline-block text-[11px] font-semibold text-red-600 hover:underline">
+          مراجعة الحسابات
+        </a>
+      </article>
+
+      <article class="rounded-xl border-t-4 border-violet-500 bg-white p-4 shadow-sm">
+        <div class="flex items-start justify-between">
+          <div>
+            <p class="text-xs font-medium text-slate-500">نشاط النظام اليوم</p>
+            <p id="todayActivity" class="mt-2 text-2xl font-bold text-slate-900">—</p>
+          </div>
+          <div class="rounded-lg bg-violet-50 p-2.5 text-lg text-violet-600">⚡</div>
+        </div>
+        <a href="./reports/audit-logs.html" class="mt-3 inline-block text-[11px] font-semibold text-violet-600 hover:underline">
+          عرض سجل النشاط
+        </a>
+      </article>
+    </section>
+
+    <section class="grid gap-5 xl:grid-cols-12">
+
+      <!-- Recent audit -->
+      <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-8 flex flex-col">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">النشاط الإداري الأخير</h3>
+            <p class="mt-0.5 text-xs text-slate-500">آخر العمليات المسجلة في سجل التدقيق.</p>
+          </div>
+
+          <a href="./reports/audit-logs.html" class="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-brand-lightGold">
+            عرض السجل الكامل ←
+          </a>
+        </div>
+
+        <div class="mt-4 max-h-[350px] overflow-y-auto">
+          <table class="w-full min-w-[640px] text-right text-xs">
+            <thead class="sticky top-0 bg-white shadow-sm border-b border-slate-200 text-slate-500">
+              <tr>
+                <th class="pb-2.5 font-medium">المستخدم</th>
+                <th class="pb-2.5 font-medium">الإجراء</th>
+                <th class="pb-2.5 font-medium">العنصر</th>
+                <th class="pb-2.5 font-medium">التاريخ والوقت</th>
+              </tr>
+            </thead>
+
+            <tbody id="auditLogsBody" class="divide-y divide-slate-100">
+              <tr>
+                <td colspan="4" class="py-8 text-center text-xs text-slate-400">
+                  جارٍ تحميل سجل النشاط...
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <div class="space-y-5 xl:col-span-4">
+
+        <!-- Quick actions -->
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 class="text-sm font-bold text-slate-900">إجراءات سريعة</h3>
+
+          <div class="mt-4 grid grid-cols-2 gap-2.5">
+            <a href="./manage-users/add.html" class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold">
+              <span class="text-lg">👤</span>
+              <p class="mt-1.5 text-xs font-semibold">إضافة مستخدم</p>
+            </a>
+
+            <a href="./manage-courses/create.html" class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold">
+              <span class="text-lg">📚</span>
+              <p class="mt-1.5 text-xs font-semibold">إضافة دورة</p>
+            </a>
+
+            <a href="./reports/export.html" class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold">
+              <span class="text-lg">📄</span>
+              <p class="mt-1.5 text-xs font-semibold">تصدير تقرير</p>
+            </a>
+
+            <a href="./reports/audit-logs.html" class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold">
+              <span class="text-lg">🛡️</span>
+              <p class="mt-1.5 text-xs font-semibold">سجل التدقيق</p>
+            </a>
+          </div>
+        </section>
+
+        <!-- Role distribution -->
+        <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <div class="flex items-center justify-between">
+            <div>
+              <h3 class="text-sm font-bold text-slate-900">توزيع المستخدمين حسب الدور</h3>
+              <p class="mt-0.5 text-xs text-slate-500">الحسابات النشطة في النظام</p>
+            </div>
+
+            <a href="./manage-users/manage-users.html" class="text-[11px] font-semibold text-brand-darkGold hover:underline">
+              إدارة المستخدمين
+            </a>
+          </div>
+
+          <div id="roleDistribution" class="mt-4 space-y-3">
+            <p class="text-center text-xs text-slate-400">جارٍ تحميل البيانات...</p>
+          </div>
+
+          <div class="mt-4 rounded-lg border border-red-100 bg-red-50 px-3.5 py-2.5">
+            <div class="flex items-center justify-between gap-3">
+              <div>
+                <p class="text-xs font-semibold text-red-700">الحسابات الموقوفة</p>
+                <p id="inactiveUsersMessage" class="mt-0.5 text-[11px] text-red-600">
+                  جارٍ تحميل البيانات...
+                </p>
+              </div>
+
+              <a href="./manage-users/manage-users.html?status=inactive" class="rounded-md bg-white px-2.5 py-1.5 text-[11px] font-bold text-red-700 shadow-sm transition hover:bg-red-100">
+                مراجعة
+              </a>
+            </div>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./dashboard.js"></script>
+</body>
+</html>
