@@ -15,8 +15,11 @@ const courseManagerNotificationsRoutes = require('./routes/course-manager.notifi
 const courseManagerUsersRoutes = require('./routes/course-manager.users.routes');
 const agentDashboardRoutes = require('./routes/agent.dashboard.routes');
 const agentCoursesRoutes = require('./routes/agent.courses.routes');
-
-
+const agentNotificationsRoutes = require('./routes/agent.notifications.routes');
+const managerDashboardRoutes = require('./routes/manager.dashboard.routes');
+const managerCoursesRoutes = require('./routes/manager.courses.routes');
+const managerNotificationsRoutes = require('./routes/manager.notifications.routes');
+const managerProfileRoutes = require('./routes/manager.profile.routes');
 
 
 
@@ -56,8 +59,12 @@ app.use('/api/course-manager/dashboard', courseManagerDashboardRoutes);
 app.use('/api/course-manager/notifications',courseManagerNotificationsRoutes);
 app.use('/api/course-manager/users',courseManagerUsersRoutes);
 app.use('/api/agent/dashboard',agentDashboardRoutes);
-app.use('/api/agent/courses',gentCoursesRoutes);
-
+app.use('/api/agent/courses',agentCoursesRoutes);
+app.use('/api/agent/notifications',agentNotificationsRoutes);
+app.use('/api/manager/dashboard',managerDashboardRoutes);
+app.use('/api/manager/courses',managerCoursesRoutes);
+app.use('/api/manager/notifications', managerNotificationsRoutes);
+app.use('/api/manager/profile', managerProfileRoutes);
 
 
 
