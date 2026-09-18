@@ -140,8 +140,22 @@ function renderDocuments(documents = []) {
     </div>
   `;
 }
+function fillLockedFields(profile) {
+  const fullNameInput = document.querySelector('#editFullName');
+  const employeeNumberInput = document.querySelector(
+    '#editEmployeeNumber'
+  );
 
+  if (fullNameInput) {
+    fullNameInput.value = profile.full_name || '';
+  }
+
+  if (employeeNumberInput) {
+    employeeNumberInput.value = profile.employee_number || '';
+  }
+}
 function renderProfile(profile) {
+  fillLockedFields(profile);
   profileData = profile;
 
   setText('#profileFullName', profile.full_name);
@@ -176,7 +190,7 @@ function renderProfile(profile) {
 
 function openModal() {
   if (!profileData) return;
-
+fillLockedFields(profileData);
   hideMessage(formMessage);
 
   document.querySelector('#editEmail').value = profileData.email || '';

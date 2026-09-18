@@ -5,12 +5,10 @@ const multer = require('multer');
 
 const uploadDirectory = path.join(
   __dirname,
-  '../../uploads/profiles'
+  '../../uploads/forms'
 );
 
-fs.mkdirSync(uploadDirectory, {
-  recursive: true,
-});
+fs.mkdirSync(uploadDirectory, { recursive: true });
 
 const storage = multer.diskStorage({
   destination: (req, file, callback) => {
@@ -18,9 +16,7 @@ const storage = multer.diskStorage({
   },
 
   filename: (req, file, callback) => {
-    const extension = path
-      .extname(file.originalname)
-      .toLowerCase();
+    const extension = path.extname(file.originalname).toLowerCase();
 
     callback(
       null,
@@ -34,12 +30,14 @@ const allowedMimeTypes = [
   'image/png',
   'image/jpeg',
   'image/jpg',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
 ];
 
 const fileFilter = (req, file, callback) => {
   if (!allowedMimeTypes.includes(file.mimetype)) {
     callback(
-      new Error('يسمح برفع ملفات PDF أو PNG أو JPG فقط.')
+      new Error('يسمح برفع PDF أو JPG أو PNG أو Word فقط.')
     );
 
     return;
@@ -48,7 +46,7 @@ const fileFilter = (req, file, callback) => {
   callback(null, true);
 };
 
-const profileUpload = multer({
+const employeeFormUpload = multer({
   storage,
   fileFilter,
   limits: {
@@ -56,8 +54,4 @@ const profileUpload = multer({
   },
 });
 
-/*
-  نصدر Multer نفسه مباشرةً،
-  حتى تعمل profileUpload.single(...) في الراوتات.
-*/
-module.exports = profileUpload;
+module.exports = employeeFormUpload;

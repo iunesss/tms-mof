@@ -46,10 +46,10 @@ async function ensureCourseInManagerDepartment(
   );
 
   if (!department) {
-    throw new Error('لا يوجد قسم نشط معيّن لهذا المدير.');
+    throw new Error('لا يوجد قسم نشط مرتبط بحساب مدير القسم.');
   }
 
-  const [rows] = await connection.execute(
+  const [[course]] = await connection.query(
     `
       SELECT
         c.id,
@@ -68,23 +68,61 @@ async function ensureCourseInManagerDepartment(
         cda.nomination_limit
 
       FROM courses c
-      INNER JOIN course_department_allocations cda
+
+      LEFT JOIN course_department_allocations cda
         ON cda.course_id = c.id
-      WHERE c.id = ?
         AND cda.department_id = ?
+
+      WHERE c.id = ?
         AND c.deleted_at IS NULL
-      LIMIT 1
+        AND (
+          (
+            c.course_type = 'TRAINING'
+            AND cda.id IS NOT NULL
+          )
+          OR
+          (
+            c.course_type = 'MISSION'
+            AND EXISTS (
+              SELECT 1
+              FROM candidates mission_candidate
+              INNER JOIN candidate_snapshots mission_snapshot
+                ON mission_snapshot.candidate_id = mission_candidate.id
+              WHERE mission_candidate.course_id = c.id
+                AND mission_candidate.status NOT IN (
+                  'REJECTED',
+                  'WITHDRAWN',
+                  'REMOVED',
+                  'CANCELLED'
+                )
+                AND CAST(
+                  JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                      mission_snapshot.organization_snapshot,
+                      '$.department_id'
+                    )
+                  ) AS UNSIGNED
+                ) = ?
+            )
+          )
+        )
     `,
-    [courseId, department.id]
+    [
+      department.id,
+      courseId,
+      department.id,
+    ]
   );
 
-  if (!rows.length) {
-    throw new Error('الدورة غير موجودة أو لا تخص قسمك.');
+  if (!course) {
+    throw new Error(
+      'الدورة غير موجودة أو لا تخص القسم المرتبط بحسابك.'
+    );
   }
 
   return {
+    course,
     department,
-    course: rows[0],
   };
 }
 
@@ -99,64 +137,52 @@ async function getAvailableEmployees(
   managerUserId,
   courseId
 ) {
-  const [employees] = await connection.execute(
+  const [employees] = await connection.query(
     `
       SELECT DISTINCT
         u.id,
         up.full_name,
         up.employee_number,
         up.job_title,
-        0 AS is_current_manager
-      FROM employee_department_assignments eda
-      INNER JOIN users u
-        ON u.id = eda.employee_user_id
+        CASE
+          WHEN u.id = ? THEN 1
+          ELSE 0
+        END AS is_department_manager
+
+      FROM users u
       INNER JOIN user_profiles up
         ON up.user_id = u.id
-      WHERE eda.department_id = ?
+
+      LEFT JOIN employee_department_assignments eda
+        ON eda.employee_user_id = u.id
         AND eda.end_date IS NULL
-        AND u.is_active = TRUE
+
+      WHERE u.is_active = 1
         AND u.deleted_at IS NULL
+        AND (
+          eda.department_id = ?
+          OR u.id = ?
+        )
         AND NOT EXISTS (
           SELECT 1
-          FROM nominations old_n
-          WHERE old_n.course_id = ?
-            AND old_n.nominee_user_id = u.id
-            AND old_n.status NOT IN (
+          FROM nominations n
+          WHERE n.course_id = ?
+            AND n.nominee_user_id = u.id
+            AND n.status NOT IN (
               'AGENT_REJECTED',
-              'WITHDRAWN'
+              'WITHDRAWN',
+              'CANCELLED',
+              'REJECTED'
             )
         )
 
-      UNION ALL
-
-      SELECT
-        manager_user.id,
-        manager_profile.full_name,
-        manager_profile.employee_number,
-        manager_profile.job_title,
-        1 AS is_current_manager
-      FROM users manager_user
-      INNER JOIN user_profiles manager_profile
-        ON manager_profile.user_id = manager_user.id
-      WHERE manager_user.id = ?
-        AND manager_user.is_active = TRUE
-        AND manager_user.deleted_at IS NULL
-        AND NOT EXISTS (
-          SELECT 1
-          FROM nominations old_n
-          WHERE old_n.course_id = ?
-            AND old_n.nominee_user_id = manager_user.id
-            AND old_n.status NOT IN (
-              'AGENT_REJECTED',
-              'WITHDRAWN'
-            )
-        )
-
-      ORDER BY full_name ASC
+      ORDER BY
+        is_department_manager DESC,
+        up.full_name ASC
     `,
     [
+      managerUserId,
       departmentId,
-      courseId,
       managerUserId,
       courseId,
     ]
@@ -342,18 +368,19 @@ async function getCourse(req, res) {
       req.user.id
     );
 
+    const isMission = course.course_type === 'MISSION';
+
     const [
-      [allocationRows],
-      [nominations],
-      [attachments],
-      [courseForms],
-      [selfCandidateRows],
+      allocationResult,
+      nominationsResult,
+      attachmentsResult,
+      courseFormsResult,
+      selfCandidateResult,
     ] = await Promise.all([
       pool.execute(
         `
           SELECT
             cda.nomination_limit,
-
             COUNT(n.id) AS nominations_count
 
           FROM course_department_allocations cda
@@ -370,33 +397,69 @@ async function getCourse(req, res) {
         [courseId, department.id]
       ),
 
-      pool.execute(
-        `
-          SELECT
-            n.id,
-            n.status,
-            n.created_at,
-            n.reason,
+      /*
+        في التدريب: ترشيحات مدير القسم.
+        في المهمة: الموظفون الموجودون فعليًا في المهمة من نفس القسم.
+      */
+      isMission
+        ? pool.execute(
+            `
+              SELECT
+                c.id,
+                c.status,
+                c.created_at,
+                NULL AS reason,
 
-            up.full_name AS employee_name,
-            up.employee_number
+                up.full_name AS employee_name,
+                up.employee_number
 
-          FROM nominations n
-          INNER JOIN user_profiles up
-            ON up.user_id = n.nominee_user_id
+              FROM candidates c
+              INNER JOIN candidate_snapshots cs
+                ON cs.candidate_id = c.id
+              INNER JOIN user_profiles up
+                ON up.user_id = c.employee_user_id
 
-          WHERE n.course_id = ?
-            AND n.department_id = ?
-            AND n.nominated_by_user_id = ?
+              WHERE c.course_id = ?
+                AND CAST(
+                  JSON_UNQUOTE(
+                    JSON_EXTRACT(
+                      cs.organization_snapshot,
+                      '$.department_id'
+                    )
+                  ) AS UNSIGNED
+                ) = ?
 
-          ORDER BY n.created_at DESC
-        `,
-        [
-          courseId,
-          department.id,
-          req.user.id,
-        ]
-      ),
+              ORDER BY c.created_at DESC
+            `,
+            [courseId, department.id]
+          )
+        : pool.execute(
+            `
+              SELECT
+                n.id,
+                n.status,
+                n.created_at,
+                NULL AS reason,
+
+                up.full_name AS employee_name,
+                up.employee_number
+
+              FROM nominations n
+              INNER JOIN user_profiles up
+                ON up.user_id = n.nominee_user_id
+
+              WHERE n.course_id = ?
+                AND n.department_id = ?
+                AND n.nominated_by_user_id = ?
+
+              ORDER BY n.created_at DESC
+            `,
+            [
+              courseId,
+              department.id,
+              req.user.id,
+            ]
+          ),
 
       pool.execute(
         `
@@ -405,12 +468,15 @@ async function getCourse(req, res) {
             ca.attachment_type,
             f.original_name,
             f.storage_key
+
           FROM course_attachments ca
           INNER JOIN files f
             ON f.id = ca.file_id
+
           WHERE ca.course_id = ?
             AND ca.deleted_at IS NULL
             AND f.deleted_at IS NULL
+
           ORDER BY ca.created_at DESC
         `,
         [courseId]
@@ -423,57 +489,79 @@ async function getCourse(req, res) {
             cf.title,
             cf.is_required,
             f.storage_key
+
           FROM course_forms cf
           INNER JOIN files f
             ON f.id = cf.template_file_id
+
           WHERE cf.course_id = ?
             AND cf.deleted_at IS NULL
             AND f.deleted_at IS NULL
+
           ORDER BY cf.display_order, cf.created_at
         `,
         [courseId]
       ),
 
       /*
-        مدير القسم مرشح لنفسه:
-        إما Candidate بعد اعتماد الوكيل،
-        أو Nomination قيد الانتظار أو معتمد.
+        هذا الفحص يخص التدريب فقط.
+        في المهمة لا نعرض قسم استمارات أو رفع ملفات لمدير القسم.
       */
-      pool.execute(
-        `
-          SELECT
-            EXISTS (
-              SELECT 1
-              FROM nominations n
-              WHERE n.course_id = ?
-                AND n.nominee_user_id = ?
-                AND n.department_id = ?
-                AND n.status NOT IN (
-                  'AGENT_REJECTED',
-                  'WITHDRAWN'
-                )
-            ) AS self_candidate
-        `,
-        [
-          courseId,
-          req.user.id,
-          department.id,
-        ]
-      ),
+      isMission
+        ? Promise.resolve([[{ self_candidate: 0 }]])
+        : pool.execute(
+            `
+              SELECT
+                EXISTS (
+                  SELECT 1
+                  FROM nominations n
+                  WHERE n.course_id = ?
+                    AND n.nominee_user_id = ?
+                    AND n.department_id = ?
+                    AND n.status NOT IN (
+                      'AGENT_REJECTED',
+                      'WITHDRAWN'
+                    )
+                ) AS self_candidate
+            `,
+            [
+              courseId,
+              req.user.id,
+              department.id,
+            ]
+          ),
     ]);
 
-    const availableEmployees = await getAvailableEmployees(
-      pool,
-      department.id,
-      req.user.id,
-      courseId
-    );
+    const [allocationRows] = allocationResult;
+    const [nominations] = nominationsResult;
+    const [attachments] = attachmentsResult;
+    const [courseForms] = courseFormsResult;
+    const [selfCandidateRows] = selfCandidateResult;
 
-    const submissionLocked = nominations.length > 0;
+    /*
+      فقط الدورات التدريبية تسمح باختيار موظفين.
+      المهمة لا يظهر فيها هذا القسم نهائيًا.
+    */
+    const availableEmployees = isMission
+      ? []
+      : await getAvailableEmployees(
+          pool,
+          department.id,
+          req.user.id,
+          courseId
+        );
+
+    const submissionLocked = isMission || nominations.length > 0;
 
     return res.json({
       department,
       course,
+
+      /*
+        يستعمله الـ JavaScript لإخفاء كل أزرار الترشيح
+        في المهمة أو البعثة.
+      */
+      read_only: isMission,
 
       departmentAllocation: {
         nomination_limit: Number(
@@ -493,14 +581,19 @@ async function getCourse(req, res) {
 
       nominations,
 
-      selfCandidate: Boolean(
-        selfCandidateRows[0]?.self_candidate
-      ),
+      selfCandidate: isMission
+        ? false
+        : Boolean(selfCandidateRows[0]?.self_candidate),
 
-      selfCourseForms: courseForms.map((form) => ({
-        ...form,
-        template_file_url: toFileUrl(form.storage_key),
-      })),
+      /*
+        لا نعرض استمارات شخصية لمدير القسم داخل المهمة.
+      */
+      selfCourseForms: isMission
+        ? []
+        : courseForms.map((form) => ({
+            ...form,
+            template_file_url: toFileUrl(form.storage_key),
+          })),
 
       attachments: attachments.map((attachment) => ({
         ...attachment,
@@ -560,6 +653,10 @@ async function submitNominations(req, res) {
       req.user.id
     );
 
+    /*
+      المهمة لا يمكن لمدير القسم ترشيح موظفين فيها.
+      مدير الدورة هو من يختار المرشحين مباشرة.
+    */
     if (course.course_type !== 'TRAINING') {
       throw new Error(
         'الترشيح من مدير القسم متاح للدورات التدريبية فقط.'
@@ -595,6 +692,12 @@ async function submitNominations(req, res) {
       );
     }
 
+    if (employeeUserIds.length > Number(course.nomination_limit)) {
+      throw new Error(
+        `لا يمكن تجاوز حد ترشيحات القسم: ${course.nomination_limit}.`
+      );
+    }
+
     const [agentRows] = await connection.execute(
       `
         SELECT
@@ -626,46 +729,48 @@ async function submitNominations(req, res) {
 
     const agentUserId = agentRows[0].agent_user_id;
 
-    const [employeeRows] = await connection.query(
+    /*
+      المسموح بترشيحهم:
+      1. موظفو القسم النشطون.
+      2. مدير القسم الحالي نفسه، حتى لو لم يكن لديه دور EMPLOYEE.
+    */
+    const employeePlaceholders = employeeUserIds
+      .map(() => '?')
+      .join(', ');
+
+    const [permittedRows] = await connection.execute(
       `
-        SELECT DISTINCT u.id
+        SELECT DISTINCT permitted_users.id
         FROM (
-          SELECT
-            eda.employee_user_id AS id
+          SELECT eda.employee_user_id AS id
           FROM employee_department_assignments eda
-          INNER JOIN users u
-            ON u.id = eda.employee_user_id
+          INNER JOIN users employee_user
+            ON employee_user.id = eda.employee_user_id
           WHERE eda.department_id = ?
             AND eda.end_date IS NULL
-            AND u.is_active = TRUE
-            AND u.deleted_at IS NULL
+            AND employee_user.is_active = TRUE
+            AND employee_user.deleted_at IS NULL
 
           UNION
 
-          SELECT ?
+          SELECT ? AS id
         ) permitted_users
-        INNER JOIN users u
-          ON u.id = permitted_users.id
-        WHERE u.is_active = TRUE
-          AND u.deleted_at IS NULL
-          AND permitted_users.id IN (?)
+        INNER JOIN users user_account
+          ON user_account.id = permitted_users.id
+        WHERE user_account.is_active = TRUE
+          AND user_account.deleted_at IS NULL
+          AND permitted_users.id IN (${employeePlaceholders})
       `,
       [
         department.id,
         req.user.id,
-        employeeUserIds,
+        ...employeeUserIds,
       ]
     );
 
-    if (employeeRows.length !== employeeUserIds.length) {
+    if (permittedRows.length !== employeeUserIds.length) {
       throw new Error(
         'يوجد موظف غير تابع للقسم أو حسابه غير نشط.'
-      );
-    }
-
-    if (employeeUserIds.length > Number(course.nomination_limit)) {
-      throw new Error(
-        `لا يمكن تجاوز حد ترشيحات القسم: ${course.nomination_limit}.`
       );
     }
 

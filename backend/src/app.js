@@ -20,9 +20,10 @@ const managerDashboardRoutes = require('./routes/manager.dashboard.routes');
 const managerCoursesRoutes = require('./routes/manager.courses.routes');
 const managerNotificationsRoutes = require('./routes/manager.notifications.routes');
 const managerProfileRoutes = require('./routes/manager.profile.routes');
-
-
-
+const employeeDashboardRoutes = require('./routes/employee.dashboard.routes');
+const employeeCoursesRoutes = require('./routes/employee.courses.routes');
+const employeeNotificationsRoutes = require('./routes/employee.notifications.routes');
+const employeeProfileRoutes = require('./routes/employee.profile.routes');
 const app = express();
 
 app.use(helmet({
@@ -41,7 +42,7 @@ app.use(cookieParser());
 
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, '../public/uploads'))
+  express.static(path.join(__dirname, '../uploads'))
 );
 
 app.get('/api/health', (req, res) => {
@@ -65,7 +66,10 @@ app.use('/api/manager/dashboard',managerDashboardRoutes);
 app.use('/api/manager/courses',managerCoursesRoutes);
 app.use('/api/manager/notifications', managerNotificationsRoutes);
 app.use('/api/manager/profile', managerProfileRoutes);
-
+app.use('/api/employee/dashboard',employeeDashboardRoutes);
+app.use('/api/employee/courses', employeeCoursesRoutes);
+app.use('/api/employee/notifications',employeeNotificationsRoutes);
+app.use('/api/employee/profile',employeeProfileRoutes);
 
 
 app.use((req, res) => {

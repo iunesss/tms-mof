@@ -2,18 +2,20 @@ const express = require('express');
 
 const { authenticate } = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
+
 const profileUpload = require(
   '../middleware/profile.upload.middleware'
 );
+
 const {
   getProfile,
   updateProfile,
-} = require('../controllers/manager.profile.controller');
+} = require('../controllers/employee.profile.controller');
 
 const router = express.Router();
 
 router.use(authenticate);
-router.use(authorize('DEPARTMENT_MANAGER'));
+router.use(authorize('EMPLOYEE'));
 
 router.get('/', getProfile);
 

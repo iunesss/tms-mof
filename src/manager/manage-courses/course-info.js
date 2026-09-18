@@ -1,7 +1,10 @@
 import { protectPage } from '../../shared/auth-guard.js';
 
 const courseId = new URLSearchParams(window.location.search).get('id');
+
 let availableEmployees = [];
+let currentCourse = null;
+let currentUserId = null;
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -40,7 +43,10 @@ async function api(url, options = {}) {
 
 function setText(selector, value) {
   const element = document.querySelector(selector);
-  if (element) element.textContent = value || '—';
+
+  if (element) {
+    element.textContent = value || '—';
+  }
 }
 
 function nominationStatusText(status) {
@@ -51,6 +57,9 @@ function nominationStatusText(status) {
     AGENT_REJECTED: 'رفضه الوكيل',
     SELECTED: 'تم الاختيار',
     DOCUMENTS_PENDING: 'بانتظار المستندات',
+    PRELIMINARILY_ACCEPTED: 'مقبول مبدئيًا',
+    CONFIRMED: 'مؤكد',
+    REJECTED: 'مرفوض',
     WITHDRAWN: 'تم السحب',
   };
 
@@ -61,9 +70,11 @@ function showEditorMessage(message, type = 'error') {
   const element = document.querySelector('#nominationEditorMessage');
 
   element.textContent = message;
-  element.className = type === 'success'
-    ? 'mx-5 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'
-    : 'mx-5 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700';
+
+  element.className =
+    type === 'success'
+      ? 'mx-5 mt-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-700'
+      : 'mx-5 mt-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700';
 
   element.classList.remove('hidden');
 }
@@ -99,42 +110,49 @@ function renderAvailableEmployees(employees) {
         </td>
       </tr>
     `;
+
     return;
   }
 
-  body.innerHTML = employees.map((employee) => `
-    <tr class="hover:bg-slate-50">
-      <td class="px-5 py-3">
-        <input
-          type="checkbox"
-          value="${employee.id}"
-          class="employee-checkbox h-4 w-4 accent-[#C9A227]"
-        />
-      </td>
+  body.innerHTML = employees
+    .map(
+      (employee) => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3">
+            <input
+              type="checkbox"
+              value="${employee.id}"
+              class="employee-checkbox h-4 w-4 accent-[#C9A227]"
+            />
+          </td>
 
-      <td class="px-5 py-3">
-        <p class="font-bold text-slate-800">
-          ${escapeHtml(employee.full_name)}
-        </p>
+          <td class="px-5 py-3">
+            <p class="font-bold text-slate-800">
+              ${escapeHtml(employee.full_name)}
+            </p>
 
-        ${Number(employee.id) === Number(employee.current_manager_user_id)
-          ? '<p class="mt-1 text-[10px] font-bold text-brand-darkGold">أنت</p>'
-          : ''}
-      </td>
+            ${
+              Number(employee.id) === Number(currentUserId)
+                ? '<p class="mt-1 text-[10px] font-bold text-brand-darkGold">أنت</p>'
+                : ''
+            }
+          </td>
 
-      <td class="px-5 py-3 text-slate-600">
-        ${escapeHtml(employee.employee_number || '—')}
-      </td>
+          <td class="px-5 py-3 text-slate-600">
+            ${escapeHtml(employee.employee_number || '—')}
+          </td>
 
-      <td class="px-5 py-3 text-slate-600">
-        ${escapeHtml(employee.job_title || '—')}
-      </td>
+          <td class="px-5 py-3 text-slate-600">
+            ${escapeHtml(employee.job_title || '—')}
+          </td>
 
-      <td class="px-5 py-3 text-slate-500">
-        حدّد لإضافة الموظف إلى الترشيحات
-      </td>
-    </tr>
-  `).join('');
+          <td class="px-5 py-3 text-slate-500">
+            حدّد لإضافة الموظف إلى الترشيحات
+          </td>
+        </tr>
+      `
+    )
+    .join('');
 
   document.querySelectorAll('.employee-checkbox').forEach((checkbox) => {
     checkbox.addEventListener('change', updateSelectionState);
@@ -144,70 +162,97 @@ function renderAvailableEmployees(employees) {
 }
 
 function renderNominations(nominations) {
-  const body = document.querySelector('#departmentNominationsTableBody');
+  const body = document.querySelector(
+    '#departmentNominationsTableBody'
+  );
+
+  const isMission = currentCourse?.course_type === 'MISSION';
 
   document.querySelector('#departmentCandidatesText').textContent =
     nominations.length
-      ? `إجمالي ترشيحات القسم: ${nominations.length}`
-      : 'لا توجد ترشيحات للقسم حتى الآن.';
+      ? isMission
+        ? `إجمالي موظفي القسم في المهمة: ${nominations.length}`
+        : `إجمالي ترشيحات القسم: ${nominations.length}`
+      : isMission
+        ? 'لا يوجد موظفون من القسم في هذه المهمة.'
+        : 'لا توجد ترشيحات للقسم حتى الآن.';
 
   if (!nominations.length) {
     body.innerHTML = `
       <tr>
         <td colspan="5" class="px-5 py-10 text-center text-xs text-slate-400">
-          لا توجد ترشيحات للقسم.
+          ${
+            isMission
+              ? 'لا يوجد موظفون من القسم ضمن هذه المهمة.'
+              : 'لا توجد ترشيحات للقسم.'
+          }
         </td>
       </tr>
     `;
+
     return;
   }
 
-  body.innerHTML = nominations.map((nomination) => `
-    <tr class="hover:bg-slate-50">
-      <td class="px-5 py-3 font-bold text-slate-800">
-        ${escapeHtml(nomination.employee_name)}
-      </td>
+  body.innerHTML = nominations
+    .map(
+      (nomination) => `
+        <tr class="hover:bg-slate-50">
+          <td class="px-5 py-3 font-bold text-slate-800">
+            ${escapeHtml(nomination.employee_name)}
+          </td>
 
-      <td class="px-5 py-3 text-slate-600">
-        ${escapeHtml(nomination.employee_number || '—')}
-      </td>
+          <td class="px-5 py-3 text-slate-600">
+            ${escapeHtml(nomination.employee_number || '—')}
+          </td>
 
-      <td class="px-5 py-3 text-slate-500">
-        ${formatDate(nomination.created_at)}
-      </td>
+          <td class="px-5 py-3 text-slate-500">
+            ${formatDate(nomination.created_at)}
+          </td>
 
-      <td class="px-5 py-3">
-        <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
-          ${nominationStatusText(nomination.status)}
-        </span>
-      </td>
+          <td class="px-5 py-3">
+            <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
+              ${nominationStatusText(nomination.status)}
+            </span>
+          </td>
 
-      <td class="px-5 py-3 text-slate-500">
-        ${escapeHtml(nomination.reason || '—')}
-      </td>
-    </tr>
-  `).join('');
+          <td class="px-5 py-3 text-slate-500">
+            ${
+              currentCourse?.course_type === 'MISSION'
+                ? 'تم اختياره مباشرةً للمهمة'
+                : escapeHtml(nomination.reason || '—')
+            }
+          </td>
+        </tr>
+      `
+    )
+    .join('');
 }
 
 function renderAttachments(attachments) {
-  const container = document.querySelector('#courseAttachmentsList');
+  const container = document.querySelector(
+    '#courseAttachmentsList'
+  );
 
   if (!attachments.length) {
     container.textContent = 'لا توجد أجندة أو مرفقات حاليًا.';
     return;
   }
 
-  container.innerHTML = attachments.map((attachment) => `
-    <a
-      href="${escapeHtml(attachment.file_url)}"
-      target="_blank"
-      rel="noopener"
-      class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-brand-darkGold"
-    >
-      ${escapeHtml(attachment.attachment_type)}:
-      ${escapeHtml(attachment.original_name)}
-    </a>
-  `).join('');
+  container.innerHTML = attachments
+    .map(
+      (attachment) => `
+        <a
+          href="${escapeHtml(attachment.file_url)}"
+          target="_blank"
+          rel="noopener"
+          class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-brand-darkGold"
+        >
+          ${escapeHtml(attachment.attachment_type)}:
+          ${escapeHtml(attachment.original_name)}
+        </a>
+      `
+    )
+    .join('');
 }
 
 function renderSelfCourseForms(forms) {
@@ -222,54 +267,70 @@ function renderSelfCourseForms(forms) {
 
   section.classList.remove('hidden');
 
-  container.innerHTML = forms.map((form) => `
-    <article class="rounded-lg border border-slate-200 bg-slate-50 p-4">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p class="text-xs font-bold text-slate-800">
-            ${escapeHtml(form.title)}
-          </p>
+  container.innerHTML = forms
+    .map(
+      (form) => `
+        <article class="rounded-lg border border-slate-200 bg-slate-50 p-4">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p class="text-xs font-bold text-slate-800">
+                ${escapeHtml(form.title)}
+              </p>
 
-          <p class="mt-1 text-[11px] ${
-            Number(form.is_required) ? 'text-rose-600' : 'text-slate-500'
-          }">
-            ${Number(form.is_required) ? 'استمارة إلزامية' : 'استمارة اختيارية'}
-          </p>
-        </div>
+              <p class="mt-1 text-[11px] ${
+                Number(form.is_required)
+                  ? 'text-rose-600'
+                  : 'text-slate-500'
+              }">
+                ${
+                  Number(form.is_required)
+                    ? 'استمارة إلزامية'
+                    : 'استمارة اختيارية'
+                }
+              </p>
+            </div>
 
-        <a
-          href="${escapeHtml(form.template_file_url)}"
-          target="_blank"
-          rel="noopener"
-          class="w-fit rounded-lg border border-brand-gold px-3 py-1.5 text-[11px] font-bold text-brand-darkGold"
-        >
-          تحميل الاستمارة
-        </a>
-      </div>
+            <a
+              href="${escapeHtml(form.template_file_url)}"
+              target="_blank"
+              rel="noopener"
+              class="w-fit rounded-lg border border-brand-gold px-3 py-1.5 text-[11px] font-bold text-brand-darkGold"
+            >
+              تحميل الاستمارة
+            </a>
+          </div>
 
-      <div class="mt-3 flex flex-col gap-2 sm:flex-row">
-        <input
-          data-form-id="${form.id}"
-          type="file"
-          class="self-form-file flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-[11px]"
-        />
+          <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+            <input
+              data-form-id="${form.id}"
+              type="file"
+              class="self-form-file flex-1 rounded-lg border border-slate-300 bg-white px-3 py-2 text-[11px]"
+            />
 
-        <button
-          data-form-id="${form.id}"
-          type="button"
-          class="upload-self-form-button rounded-lg bg-brand-gold px-4 py-2 text-[11px] font-bold text-white"
-        >
-          رفع النسخة المعبأة
-        </button>
-      </div>
-    </article>
-  `).join('');
+            <button
+              data-form-id="${form.id}"
+              type="button"
+              class="upload-self-form-button rounded-lg bg-brand-gold px-4 py-2 text-[11px] font-bold text-white"
+            >
+              رفع النسخة المعبأة
+            </button>
+          </div>
+        </article>
+      `
+    )
+    .join('');
 }
 
 function fillPage(data) {
   const course = data.course || {};
   const department = data.department || {};
   const allocation = data.departmentAllocation || {};
+
+  currentCourse = course;
+
+  const isReadOnlyMission =
+    data.read_only === true ||
+    course.course_type === 'MISSION';
 
   setText('#courseTitle', course.title);
   setText('#courseNumber', course.course_no || 'بدون رقم');
@@ -278,8 +339,18 @@ function fillPage(data) {
   setText('#courseDescription', course.description || 'لا يوجد وصف.');
   setText('#departmentName', department.name);
   setText('#sectorName', department.sector_name);
-  setText('#departmentNominationLimit', allocation.nomination_limit || 0);
-  setText('#departmentNominationsCount', allocation.nominations_count || 0);
+
+  setText(
+    '#departmentNominationLimit',
+    isReadOnlyMission
+      ? 'لا ينطبق على المهمة'
+      : allocation.nomination_limit || 0
+  );
+
+  setText(
+    '#departmentNominationsCount',
+    allocation.nominations_count || 0
+  );
 
   setText(
     '#courseDates',
@@ -294,16 +365,24 @@ function fillPage(data) {
   );
 
   document.querySelector('#courseTypeBadge').textContent =
-    course.course_type === 'MISSION' ? 'مهمة / بعثة' : 'دورة تدريبية';
+    course.course_type === 'MISSION'
+      ? 'مهمة / بعثة'
+      : 'دورة تدريبية';
 
   document.querySelector('#courseStatusBadge').textContent =
     course.status || '—';
 
-  availableEmployees = data.availableEmployees || [];
+  availableEmployees = isReadOnlyMission
+    ? []
+    : data.availableEmployees || [];
 
   const editor = document.querySelector('#nominationEditorSection');
 
-  if (data.submission_locked) {
+  /*
+    المهمة: للعرض فقط.
+    التدريب بعد الإرسال: لا يمكن تعديله.
+  */
+  if (isReadOnlyMission || data.submission_locked) {
     editor.classList.add('hidden');
   } else {
     editor.classList.remove('hidden');
@@ -313,8 +392,18 @@ function fillPage(data) {
   renderNominations(data.nominations || []);
   renderAttachments(data.attachments || []);
 
-  if (data.selfCandidate) {
+  const selfCandidateSection = document.querySelector(
+    '#selfCandidateSection'
+  );
+
+  /*
+    الاستمارات تظهر فقط في التدريب، إذا رشح المدير نفسه.
+    المهمة لا تعرض أي رفع أو استمارات شخصية من هذه الصفحة.
+  */
+  if (!isReadOnlyMission && data.selfCandidate) {
     renderSelfCourseForms(data.selfCourseForms || []);
+  } else {
+    selfCandidateSection.classList.add('hidden');
   }
 }
 
@@ -324,6 +413,17 @@ async function loadCourse() {
 }
 
 async function submitNominations() {
+  /*
+    حماية إضافية حتى لو حاول شخص استدعاء الدالة يدويًا.
+  */
+  if (currentCourse?.course_type === 'MISSION') {
+    showEditorMessage(
+      'المهمة للعرض فقط، ولا يمكن إرسال ترشيحات فيها.'
+    );
+
+    return;
+  }
+
   const employeeUserIds = [
     ...document.querySelectorAll('.employee-checkbox:checked'),
   ].map((checkbox) => Number(checkbox.value));
@@ -333,7 +433,9 @@ async function submitNominations() {
     return;
   }
 
-  const button = document.querySelector('#submitNominationsButton');
+  const button = document.querySelector(
+    '#submitNominationsButton'
+  );
 
   button.disabled = true;
   button.textContent = 'جارٍ إرسال الترشيحات...';
@@ -343,7 +445,9 @@ async function submitNominations() {
       `/api/manager/courses/${courseId}/nominations`,
       {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+        },
         body: JSON.stringify({ employeeUserIds }),
       }
     );
@@ -364,7 +468,10 @@ async function submitNominations() {
 
 async function initialize() {
   const user = await protectPage(['DEPARTMENT_MANAGER']);
+
   if (!user) return;
+
+  currentUserId = user.id || user.userId || user.user_id;
 
   if (!courseId) {
     window.location.replace('./main-courses.html');
@@ -374,23 +481,27 @@ async function initialize() {
   document.querySelector('#selectAllEmployees').addEventListener(
     'change',
     (event) => {
-      document.querySelectorAll('.employee-checkbox').forEach((checkbox) => {
-        checkbox.checked = event.target.checked;
-      });
+      document
+        .querySelectorAll('.employee-checkbox')
+        .forEach((checkbox) => {
+          checkbox.checked = event.target.checked;
+        });
 
       updateSelectionState();
     }
   );
 
-  document.querySelector('#submitNominationsButton').addEventListener(
-    'click',
-    submitNominations
-  );
+  document
+    .querySelector('#submitNominationsButton')
+    .addEventListener('click', submitNominations);
 
   try {
     await loadCourse();
   } catch (error) {
-    setText('#courseTitle', error.message || 'تعذر تحميل الدورة.');
+    setText(
+      '#courseTitle',
+      error.message || 'تعذر تحميل الدورة.'
+    );
   }
 }
 
