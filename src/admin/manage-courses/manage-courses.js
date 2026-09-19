@@ -10,6 +10,11 @@ import {
 
 const courseId = getQuery('id');
 
+const pageSource =
+  new URLSearchParams(window.location.search).get('from') === 'archive'
+    ? 'archive'
+    : 'courses';
+
 function setText(selector, value) {
   const element = document.querySelector(selector);
 
@@ -81,7 +86,7 @@ function renderCandidates(candidates) {
 
   grid.innerHTML = candidates.map((candidate) => `
     <a
-href="../reports/employee-info.html?courseId=${courseId}&candidateId=${candidate.id}"
+href="./manage-candidate.html?courseId=${courseId}&candidateId=${candidate.id}&from=${pageSource}"
       class="rounded-xl border border-slate-200 bg-white p-4 transition hover:border-brand-gold hover:shadow-sm"
     >
       <div class="flex items-center justify-between gap-3">

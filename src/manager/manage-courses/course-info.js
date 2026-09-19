@@ -91,7 +91,48 @@ function updateSelectionState() {
 
   document.querySelector('#submitNominationsButton').disabled =
     selected.length === 0;
+document.querySelector('#selfCourseFormsList').addEventListener(
+  'click',
+  async (event) => {
+    const button = event.target.closest('.upload-self-form-button');
+    if (!button) return;
 
+    const formId = Number(button.dataset.formId);
+    const fileInput = [
+      ...document.querySelectorAll('.self-form-file'),
+    ].find((input) => Number(input.dataset.formId) === formId);
+
+    const file = fileInput?.files?.[0];
+
+    if (!file) {
+      alert('اختر الاستمارة المعبأة أولًا.');
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'جارٍ الرفع...';
+
+    try {
+      const body = new FormData();
+      body.append('formFile', file);
+
+      await api(
+        `/api/manager/courses/${courseId}/forms/${formId}/submission`,
+        {
+          method: 'POST',
+          body,
+        }
+      );
+
+      alert('تم رفع الاستمارة بنجاح.');
+      await loadCourseInfo();
+    } catch (error) {
+      alert(error.message || 'تعذر رفع الاستمارة.');
+      button.disabled = false;
+      button.textContent = 'رفع النسخة المعبأة';
+    }
+  }
+);
   const selectAll = document.querySelector('#selectAllEmployees');
 
   selectAll.checked =
@@ -494,7 +535,44 @@ async function initialize() {
   document
     .querySelector('#submitNominationsButton')
     .addEventListener('click', submitNominations);
+document.querySelector('#selfCourseFormsList').addEventListener(
+  'click',
+  async (event) => {
+    const button = event.target.closest('.upload-self-form-button');
+    if (!button) return;
 
+    const formId = Number(button.dataset.formId);
+    const fileInput = [...document.querySelectorAll('.self-form-file')]
+      .find((input) => Number(input.dataset.formId) === formId);
+
+    const file = fileInput?.files?.[0];
+
+    if (!file) {
+      alert('اختر الاستمارة المعبأة أولًا.');
+      return;
+    }
+
+    button.disabled = true;
+    button.textContent = 'جارٍ الرفع...';
+
+    try {
+      const body = new FormData();
+      body.append('formFile', file);
+
+      await api(
+        `/api/manager/courses/${courseId}/forms/${formId}/submission`,
+        { method: 'POST', body }
+      );
+
+      alert('تم رفع الاستمارة بنجاح.');
+      await loadCourse();
+    } catch (error) {
+      alert(error.message || 'تعذر رفع الاستمارة.');
+      button.disabled = false;
+      button.textContent = 'رفع النسخة المعبأة';
+    }
+  }
+);
   try {
     await loadCourse();
   } catch (error) {

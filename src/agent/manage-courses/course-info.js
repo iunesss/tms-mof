@@ -35,10 +35,9 @@ function showMessage(message, type = 'error') {
 
 function statusClass(status) {
   const classes = {
-    PENDING: 'bg-amber-50 text-amber-700',
-    PENDING_AGENT: 'bg-amber-50 text-amber-700',
-    AGENT_APPROVED: 'bg-emerald-50 text-emerald-700',
-    AGENT_REJECTED: 'bg-rose-50 text-rose-700',
+    SUBMITTED: 'bg-amber-50 text-amber-700',
+AGENT_CONFIRMED: 'bg-emerald-50 text-emerald-700',
+AGENT_REJECTED: 'bg-rose-50 text-rose-700',
     SELECTED: 'bg-blue-50 text-blue-700',
   };
 
@@ -93,9 +92,7 @@ function renderNominations(items) {
 
   body.innerHTML = items
     .map((nomination) => {
-      const pending =
-        nomination.status === 'PENDING' ||
-        nomination.status === 'PENDING_AGENT';
+    const pending = nomination.status === 'SUBMITTED';
 
       return `
         <tr class="hover:bg-slate-50">

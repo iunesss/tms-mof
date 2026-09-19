@@ -5,7 +5,7 @@ const multer = require('multer');
 
 const uploadDirectory = path.join(
   __dirname,
-  '../../uploads/profiles'
+  '../../public/uploads/profiles'
 );
 
 fs.mkdirSync(uploadDirectory, {

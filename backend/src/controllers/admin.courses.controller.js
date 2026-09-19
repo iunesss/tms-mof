@@ -56,7 +56,23 @@ function toFileUrl(storageKey) {
   const baseUrl = process.env.API_PUBLIC_URL || 'http://localhost:3000';
   return `${baseUrl}/uploads/${storageKey}`;
 }
+function normalizeOriginalName(fileName = '') {
+  /*
+    يعالج أسماء الملفات العربية إذا وصل الاسم بترميز latin1.
+  */
+  if (/[\u00C0-\u00FF]/.test(fileName)) {
+    const decoded = Buffer.from(
+      fileName,
+      'latin1'
+    ).toString('utf8');
 
+    if (!decoded.includes('\uFFFD')) {
+      return decoded;
+    }
+  }
+
+  return fileName;
+}
 function toUiStatus(dbStatus) {
   if (
     dbStatus === 'OPEN_FOR_NOMINATION' ||
@@ -1759,9 +1775,32 @@ async function listCourseCandidates(req, res) {
       `,
       [courseId]
     );
-
-    return res.json({ candidates });
-  } catch (error) {
+const [approvedNominations] = await pool.query(
+  `
+    SELECT
+      n.id,
+      n.created_at,
+      up.full_name,
+      up.employee_number,
+      d.name AS department_name,
+      s.name AS sector_name
+    FROM nominations n
+    INNER JOIN user_profiles up
+      ON up.user_id = n.nominee_user_id
+    INNER JOIN departments d
+      ON d.id = n.department_id
+    INNER JOIN sectors s
+      ON s.id = d.sector_id
+    LEFT JOIN candidates candidate
+      ON candidate.source_nomination_id = n.id
+    WHERE n.course_id = ?
+      AND n.status = 'AGENT_CONFIRMED'
+      AND candidate.id IS NULL
+    ORDER BY s.name, d.name, n.created_at
+  `,
+  [courseId]
+);
+return res.json({ candidates, approvedNominations });  } catch (error) {
     console.error('List course candidates error:', error);
     return sendError(res, 500, 'تعذر تحميل المرشحين.');
   }
@@ -1858,122 +1897,171 @@ async function getCandidate(req, res) {
       return sendError(res, 404, 'المرشح غير موجود ضمن هذه الدورة.');
     }
 
-    const [documents] = await pool.query(
-      `
-        SELECT
-          cd.id,
-          dr.title AS requirement_name,
-          cd.status,
-          cd.last_submitted_at AS uploaded_at,
-          f.storage_key,
-          review.rejection_reason AS review_reason
-        FROM candidate_documents cd
-        INNER JOIN document_requirements dr
-          ON dr.id = cd.document_requirement_id
-        LEFT JOIN candidate_document_versions cdv
-          ON cdv.candidate_document_id = cd.id
-          AND cdv.version_no = cd.current_version_no
-        LEFT JOIN files f
-          ON f.id = cdv.file_id
-        LEFT JOIN candidate_document_reviews review
-          ON review.id = (
-            SELECT MAX(review2.id)
-            FROM candidate_document_reviews review2
-            WHERE review2.candidate_document_version_id = cdv.id
-          )
-        WHERE cd.candidate_id = ?
-        ORDER BY dr.display_order, dr.title
-      `,
-      [candidateId]
-    );
+    const [
+      formsResult,
+      profileDocumentsResult,
+      attachmentsResult,
+      statusHistoryResult,
+    ] = await Promise.all([
+      pool.query(
+        `
+          SELECT
+            cfs.id,
+            cf.title,
+            cf.is_required,
+            cfs.status,
+            cfs.current_version_no,
+            cfs.last_submitted_at,
+            cfs.reviewed_at,
+            cfs.rejection_reason,
 
-    const [forms] = await pool.query(
-      `
-        SELECT
-          cfs.id,
-          cf.title AS name,
-          f.storage_key
-        FROM candidate_form_submissions cfs
-        INNER JOIN course_forms cf
-          ON cf.id = cfs.course_form_id
-        LEFT JOIN form_submission_versions fsv
-          ON fsv.candidate_form_submission_id = cfs.id
-          AND fsv.version_no = cfs.current_version_no
-        LEFT JOIN files f
-          ON f.id = fsv.file_id
-        WHERE cfs.candidate_id = ?
-        ORDER BY cf.display_order, cf.title
-      `,
-      [candidateId]
-    );
+            f.original_name,
+            f.storage_key
 
-    const [profileDocuments] = await pool.query(
-      `
-        SELECT
-          pd.label AS name,
-          f.storage_key
-        FROM profile_documents pd
-        LEFT JOIN profile_document_versions pdv
-          ON pdv.profile_document_id = pd.id
-          AND pdv.version_no = (
-            SELECT MAX(version_no)
-            FROM profile_document_versions
-            WHERE profile_document_id = pd.id
-          )
-        LEFT JOIN files f
-          ON f.id = pdv.file_id
-        WHERE pd.user_profile_id = ?
-          AND pd.deleted_at IS NULL
-        ORDER BY pd.created_at DESC
-      `,
-      [candidate.employee_user_id]
-    );
+          FROM candidate_form_submissions cfs
+          INNER JOIN course_forms cf
+            ON cf.id = cfs.course_form_id
 
-    const [statusHistory] = await pool.query(
-      `
-        SELECT
-          from_status,
-          to_status,
-          reason,
-          changed_at
-        FROM candidate_status_history
-        WHERE candidate_id = ?
-        ORDER BY changed_at DESC
-      `,
-      [candidateId]
-    );
+          LEFT JOIN form_submission_versions fsv
+            ON fsv.candidate_form_submission_id = cfs.id
+            AND fsv.version_no = cfs.current_version_no
+
+          LEFT JOIN files f
+            ON f.id = fsv.file_id
+
+          WHERE cfs.candidate_id = ?
+
+          ORDER BY
+            cf.display_order ASC,
+            cf.title ASC
+        `,
+        [candidateId]
+      ),
+
+      pool.query(
+        `
+          SELECT
+            pd.id,
+            pd.document_type,
+            pd.label,
+            pd.status,
+
+            latest_review.rejection_reason,
+            latest_review.reviewed_at,
+
+            f.original_name,
+            f.storage_key
+
+          FROM profile_documents pd
+
+          LEFT JOIN profile_document_versions pdv
+            ON pdv.profile_document_id = pd.id
+            AND pdv.version_no = (
+              SELECT MAX(version_no)
+              FROM profile_document_versions
+              WHERE profile_document_id = pd.id
+            )
+
+          LEFT JOIN files f
+            ON f.id = pdv.file_id
+
+          LEFT JOIN profile_document_reviews latest_review
+            ON latest_review.id = (
+              SELECT MAX(review2.id)
+              FROM profile_document_reviews review2
+              WHERE review2.profile_document_version_id = pdv.id
+            )
+
+          WHERE pd.user_profile_id = ?
+            AND pd.deleted_at IS NULL
+
+          ORDER BY pd.created_at DESC
+        `,
+        [candidate.employee_user_id]
+      ),
+
+      pool.query(
+        `
+          SELECT
+            ca.id,
+            ca.attachment_type,
+            ca.note,
+            ca.created_at,
+
+            f.original_name,
+            f.storage_key
+
+          FROM candidate_attachments ca
+          INNER JOIN files f
+            ON f.id = ca.file_id
+
+          WHERE ca.candidate_id = ?
+            AND ca.deleted_at IS NULL
+
+          ORDER BY ca.created_at DESC
+        `,
+        [candidateId]
+      ),
+
+      pool.query(
+        `
+          SELECT
+            from_status,
+            to_status,
+            reason,
+            changed_at
+          FROM candidate_status_history
+          WHERE candidate_id = ?
+          ORDER BY changed_at DESC
+        `,
+        [candidateId]
+      ),
+    ]);
+
+    const [forms] = formsResult;
+    const [profileDocuments] = profileDocumentsResult;
+    const [attachments] = attachmentsResult;
+    const [statusHistory] = statusHistoryResult;
 
     return res.json({
       candidate: {
         ...candidate,
+
         snapshot: {
           ...parseJson(candidate.profile_snapshot),
           ...parseJson(candidate.organization_snapshot),
         },
-        documents: documents.map((document) => ({
-          ...document,
-          file_url: document.storage_key
-            ? toFileUrl(document.storage_key)
+
+        forms: forms.map((form) => ({
+          ...form,
+          file_url: form.storage_key
+            ? toFileUrl(form.storage_key)
             : null,
         })),
-        forms: forms
-          .filter((form) => form.storage_key)
-          .map((form) => ({
-            ...form,
-            file_url: toFileUrl(form.storage_key),
-          })),
+
         profile_documents: profileDocuments
           .filter((document) => document.storage_key)
           .map((document) => ({
             ...document,
             file_url: toFileUrl(document.storage_key),
           })),
+
+        attachments: attachments.map((attachment) => ({
+          ...attachment,
+          file_url: toFileUrl(attachment.storage_key),
+        })),
+
         status_history: statusHistory,
       },
     });
   } catch (error) {
     console.error('Get candidate error:', error);
-    return sendError(res, 500, 'تعذر تحميل تفاصيل المرشح.');
+
+    return sendError(
+      res,
+      500,
+      'تعذر تحميل تفاصيل المرشح.'
+    );
   }
 }
 
@@ -1981,43 +2069,91 @@ async function ensureCandidateReadyForPreliminaryAcceptance(
   connection,
   candidateId
 ) {
-  const [[documentsCheck]] = await connection.query(
+  const [[candidate]] = await connection.query(
     `
-      SELECT COUNT(*) AS missing_count
-      FROM candidate_documents cd
-      INNER JOIN document_requirements dr
-        ON dr.id = cd.document_requirement_id
-      WHERE cd.candidate_id = ?
-        AND dr.is_required = 1
-        AND dr.deleted_at IS NULL
-        AND cd.status <> 'APPROVED'
+      SELECT
+        id,
+        employee_user_id,
+        course_id
+      FROM candidates
+      WHERE id = ?
     `,
     [candidateId]
   );
 
-  if (documentsCheck.missing_count > 0) {
+  if (!candidate) {
+    throw new Error('المرشح غير موجود.');
+  }
+
+  /*
+    1. التحقق من كل الاستمارات الإلزامية.
+  */
+  const [incompleteForms] = await connection.query(
+    `
+      SELECT
+        cf.title,
+        cfs.status
+      FROM course_forms cf
+      LEFT JOIN candidate_form_submissions cfs
+        ON cfs.course_form_id = cf.id
+        AND cfs.candidate_id = ?
+
+      WHERE cf.course_id = ?
+        AND cf.deleted_at IS NULL
+        AND cf.is_required = 1
+        AND (
+          cfs.id IS NULL
+          OR cfs.status <> 'APPROVED'
+        )
+
+      ORDER BY cf.display_order, cf.title
+    `,
+    [
+      candidateId,
+      candidate.course_id,
+    ]
+  );
+
+  if (incompleteForms.length) {
+    const formNames = incompleteForms
+      .map((form) => form.title)
+      .join('، ');
+
     throw new Error(
-      'لا يمكن القبول المبدئي قبل اعتماد جميع المستندات المطلوبة.'
+      `لا يمكن القبول المبدئي قبل اعتماد جميع الاستمارات الإلزامية: ${formNames}.`
     );
   }
 
-  const [[formsCheck]] = await connection.query(
+  /*
+    2. التحقق من جواز السفر الشخصي.
+    يجب أن يكون موجودًا وله نسخة مرفوعة وحالته APPROVED.
+  */
+  const [[passport]] = await connection.query(
     `
-      SELECT COUNT(*) AS missing_count
-      FROM candidate_form_submissions cfs
-      INNER JOIN course_forms cf
-        ON cf.id = cfs.course_form_id
-      WHERE cfs.candidate_id = ?
-        AND cf.is_required = 1
-        AND cf.deleted_at IS NULL
-        AND cfs.status <> 'APPROVED'
+      SELECT
+        pd.id
+      FROM profile_documents pd
+      INNER JOIN profile_document_versions pdv
+        ON pdv.profile_document_id = pd.id
+        AND pdv.version_no = (
+          SELECT MAX(version_no)
+          FROM profile_document_versions
+          WHERE profile_document_id = pd.id
+        )
+
+      WHERE pd.user_profile_id = ?
+        AND pd.document_type = 'PASSPORT'
+        AND pd.deleted_at IS NULL
+        AND pd.status = 'APPROVED'
+
+      LIMIT 1
     `,
-    [candidateId]
+    [candidate.employee_user_id]
   );
 
-  if (formsCheck.missing_count > 0) {
+  if (!passport) {
     throw new Error(
-      'لا يمكن القبول المبدئي قبل اعتماد جميع النماذج المطلوبة.'
+      'لا يمكن القبول المبدئي قبل اعتماد جواز سفر المرشح.'
     );
   }
 }
@@ -2032,7 +2168,8 @@ async function updateCandidateStatus(req, res) {
     return sendError(
       res,
       400,
-      validation.error.issues[0]?.message || 'بيانات الحالة غير صحيحة.'
+      validation.error.issues[0]?.message ||
+        'بيانات الحالة غير صحيحة.'
     );
   }
 
@@ -2062,6 +2199,11 @@ async function updateCandidateStatus(req, res) {
       throw new Error('المرشح غير موجود.');
     }
 
+    /*
+      القبول المبدئي مشروط باعتماد:
+      - كل الاستمارات الإلزامية
+      - جواز السفر الشخصي
+    */
     if (status === 'PRELIMINARILY_ACCEPTED') {
       await ensureCandidateReadyForPreliminaryAcceptance(
         connection,
@@ -2070,8 +2212,7 @@ async function updateCandidateStatus(req, res) {
     }
 
     /*
-      فقط CONFIRMED وما بعدها تحسب من المقاعد النهائية.
-      الترشيحات أو القبول المبدئي لا تستهلك total_seats.
+      فقط التأكيد النهائي وما بعده يستهلك مقعدًا.
     */
     if (status === 'CONFIRMED') {
       const [[confirmedCount]] = await connection.query(
@@ -2080,21 +2221,26 @@ async function updateCandidateStatus(req, res) {
           FROM candidates
           WHERE course_id = ?
             AND id <> ?
-            AND status IN ('CONFIRMED', 'PARTICIPATING', 'COMPLETED')
+            AND status IN (
+              'CONFIRMED',
+              'PARTICIPATING',
+              'COMPLETED'
+            )
         `,
         [courseId, candidateId]
       );
 
-      if (confirmedCount.total >= candidate.total_seats) {
+      if (Number(confirmedCount.total) >= Number(candidate.total_seats)) {
         throw new Error(
           'لا يمكن تأكيد المرشح؛ اكتمل إجمالي المقاعد النهائية للدورة.'
         );
       }
     }
 
-    const confirmedAt = status === 'CONFIRMED'
-      ? new Date()
-      : candidate.confirmed_at;
+    const confirmedAt =
+      status === 'CONFIRMED'
+        ? new Date()
+        : candidate.confirmed_at;
 
     await connection.query(
       `
@@ -2135,25 +2281,35 @@ async function updateCandidateStatus(req, res) {
       ]
     );
 
-    if (status === 'REJECTED') {
-      await createNotification(connection, {
-        recipientUserId: candidate.employee_user_id,
-        senderUserId: actorUserId,
-        notificationType: 'CANDIDATE_FINAL_REJECTED',
+    const notifications = {
+      PRELIMINARILY_ACCEPTED: {
+        type: 'CANDIDATE_PRELIMINARILY_ACCEPTED',
+        title: 'تم قبولك مبدئيًا',
+        message: `تم قبولك مبدئيًا في الدورة: ${candidate.course_title}.`,
+      },
+
+      CONFIRMED: {
+        type: 'CANDIDATE_CONFIRMED',
+        title: 'تم تأكيد قبولك',
+        message: `تم تأكيد قبولك في الدورة: ${candidate.course_title}.`,
+      },
+
+      REJECTED: {
+        type: 'CANDIDATE_FINAL_REJECTED',
         title: 'نتيجة طلب الترشح',
         message: `تم رفض ترشحك نهائيًا للدورة: ${candidate.course_title}. السبب: ${reason}`,
-        relatedEntityType: 'CANDIDATE',
-        relatedEntityId: candidateId,
-      });
-    }
+      },
+    };
 
-    if (status === 'CONFIRMED') {
+    if (notifications[status]) {
+      const notification = notifications[status];
+
       await createNotification(connection, {
         recipientUserId: candidate.employee_user_id,
         senderUserId: actorUserId,
-        notificationType: 'CANDIDATE_CONFIRMED',
-        title: 'تم تأكيد قبولك',
-        message: `تم تأكيد قبولك في: ${candidate.course_title}`,
+        notificationType: notification.type,
+        title: notification.title,
+        message: notification.message,
         relatedEntityType: 'CANDIDATE',
         relatedEntityId: candidateId,
       });
@@ -2164,8 +2320,13 @@ async function updateCandidateStatus(req, res) {
       eventType: 'CANDIDATE_STATUS_CHANGED',
       entityType: 'CANDIDATE',
       entityId: Number(candidateId),
-      beforeData: { status: candidate.status },
-      afterData: { status, reason },
+      beforeData: {
+        status: candidate.status,
+      },
+      afterData: {
+        status,
+        reason,
+      },
     });
 
     await connection.commit();
@@ -2175,6 +2336,7 @@ async function updateCandidateStatus(req, res) {
     });
   } catch (error) {
     await connection.rollback();
+
     console.error('Candidate status error:', error);
 
     return sendError(
@@ -2344,7 +2506,471 @@ async function reviewCandidateDocument(req, res) {
     connection.release();
   }
 }
+async function reviewCandidateForm(req, res) {
+  const { courseId, candidateId, formId } = req.params;
+  const actorUserId = getActorId(req);
 
+  const decision = String(req.body.decision || '').trim();
+  const reason = String(req.body.reason || '').trim() || null;
+
+  if (!['APPROVED', 'REJECTED'].includes(decision)) {
+    return sendError(res, 400, 'قرار مراجعة الاستمارة غير صالح.');
+  }
+
+  if (decision === 'REJECTED' && !reason) {
+    return sendError(res, 400, 'سبب رفض الاستمارة مطلوب.');
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[submission]] = await connection.query(
+      `
+        SELECT
+          cfs.id,
+          cfs.current_version_no,
+          cfs.status,
+          cf.title,
+          c.employee_user_id,
+          co.title AS course_title
+
+        FROM candidate_form_submissions cfs
+        INNER JOIN candidates c
+          ON c.id = cfs.candidate_id
+        INNER JOIN courses co
+          ON co.id = c.course_id
+        INNER JOIN course_forms cf
+          ON cf.id = cfs.course_form_id
+
+      WHERE cfs.id = ?
+  AND cfs.candidate_id = ?
+  AND c.course_id = ?
+
+        FOR UPDATE
+      `,
+[formId, candidateId, courseId]    );
+
+    if (!submission) {
+      throw new Error('الاستمارة غير موجودة ضمن هذا المرشح.');
+    }
+
+    if (!Number(submission.current_version_no)) {
+      throw new Error('لا يمكن مراجعة استمارة لم يرفعها الموظف.');
+    }
+
+    await connection.query(
+      `
+        UPDATE candidate_form_submissions
+        SET
+          status = ?,
+          reviewed_by_user_id = ?,
+          reviewed_at = NOW(),
+          rejection_reason = ?
+        WHERE id = ?
+      `,
+      [
+        decision,
+        actorUserId,
+        decision === 'REJECTED' ? reason : null,
+        submission.id,
+      ]
+    );
+
+    await createNotification(connection, {
+      recipientUserId: submission.employee_user_id,
+      senderUserId: actorUserId,
+      notificationType:
+        decision === 'APPROVED'
+          ? 'COURSE_FORM_APPROVED'
+          : 'COURSE_FORM_REJECTED',
+      title:
+        decision === 'APPROVED'
+          ? 'تم اعتماد استمارتك'
+          : 'مطلوب إعادة رفع استمارة',
+      message:
+        decision === 'APPROVED'
+          ? `تم اعتماد استمارة "${submission.title}" للدورة: ${submission.course_title}.`
+          : `تم رفض استمارة "${submission.title}" للدورة: ${submission.course_title}. السبب: ${reason}`,
+      relatedEntityType: 'CANDIDATE_FORM_SUBMISSION',
+      relatedEntityId: submission.id,
+    });
+
+    await writeAuditLog(connection, {
+      actorUserId,
+      eventType: 'CANDIDATE_FORM_REVIEWED',
+      entityType: 'CANDIDATE_FORM_SUBMISSION',
+      entityId: submission.id,
+      afterData: {
+        decision,
+        reason,
+      },
+    });
+
+    await connection.commit();
+
+    return res.json({
+      message:
+        decision === 'APPROVED'
+          ? 'تم اعتماد الاستمارة.'
+          : 'تم رفض الاستمارة وإشعار الموظف.',
+    });
+  } catch (error) {
+    await connection.rollback();
+
+    return sendError(
+      res,
+      400,
+      error.message || 'تعذر مراجعة الاستمارة.'
+    );
+  } finally {
+    connection.release();
+  }
+}
+
+async function reviewProfileDocument(req, res) {
+  const { courseId, candidateId, profileDocumentId } = req.params;
+  const actorUserId = getActorId(req);
+
+  const decision = String(req.body.decision || '').trim();
+  const reason = String(req.body.reason || '').trim() || null;
+
+  if (!['APPROVED', 'REJECTED'].includes(decision)) {
+    return sendError(res, 400, 'قرار مراجعة المستند غير صالح.');
+  }
+
+  if (decision === 'REJECTED' && !reason) {
+    return sendError(res, 400, 'سبب رفض المستند مطلوب.');
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[document]] = await connection.query(
+      `
+        SELECT
+          pd.id,
+          pd.label,
+          pd.document_type,
+          pdv.id AS profile_document_version_id,
+          c.employee_user_id,
+          co.title AS course_title
+
+        FROM candidates c
+        INNER JOIN courses co
+          ON co.id = c.course_id
+        INNER JOIN profile_documents pd
+          ON pd.user_profile_id = c.employee_user_id
+          AND pd.deleted_at IS NULL
+        INNER JOIN profile_document_versions pdv
+          ON pdv.profile_document_id = pd.id
+          AND pdv.version_no = (
+            SELECT MAX(version_no)
+            FROM profile_document_versions
+            WHERE profile_document_id = pd.id
+          )
+
+        WHERE c.id = ?
+          AND c.course_id = ?
+          AND pd.id = ?
+
+        FOR UPDATE
+      `,
+      [candidateId, courseId, profileDocumentId]
+    );
+
+    if (!document) {
+      throw new Error('مستند الملف الشخصي غير موجود.');
+    }
+
+    await connection.query(
+      `
+        UPDATE profile_documents
+        SET status = ?
+        WHERE id = ?
+      `,
+      [decision, document.id]
+    );
+
+    await connection.query(
+      `
+        INSERT INTO profile_document_reviews (
+          profile_document_version_id,
+          reviewer_user_id,
+          decision,
+          rejection_reason
+        )
+        VALUES (?, ?, ?, ?)
+      `,
+      [
+        document.profile_document_version_id,
+        actorUserId,
+        decision,
+        decision === 'REJECTED' ? reason : null,
+      ]
+    );
+
+    await createNotification(connection, {
+      recipientUserId: document.employee_user_id,
+      senderUserId: actorUserId,
+      notificationType:
+        decision === 'APPROVED'
+          ? 'PROFILE_DOCUMENT_APPROVED'
+          : 'PROFILE_DOCUMENT_REJECTED',
+      title:
+        decision === 'APPROVED'
+          ? 'تم اعتماد مستندك الشخصي'
+          : 'مطلوب إعادة رفع مستند شخصي',
+      message:
+        decision === 'APPROVED'
+          ? `تم اعتماد مستند "${document.label}" ضمن متطلبات الدورة: ${document.course_title}.`
+          : `تم رفض مستند "${document.label}". السبب: ${reason}`,
+      relatedEntityType: 'PROFILE_DOCUMENT',
+      relatedEntityId: document.id,
+    });
+
+    await writeAuditLog(connection, {
+      actorUserId,
+      eventType: 'PROFILE_DOCUMENT_REVIEWED',
+      entityType: 'PROFILE_DOCUMENT',
+      entityId: document.id,
+      afterData: {
+        decision,
+        reason,
+      },
+    });
+
+    await connection.commit();
+
+    return res.json({
+      message:
+        decision === 'APPROVED'
+          ? 'تم اعتماد المستند.'
+          : 'تم رفض المستند وإشعار الموظف.',
+    });
+  } catch (error) {
+    await connection.rollback();
+
+    return sendError(
+      res,
+      400,
+      error.message || 'تعذر مراجعة المستند الشخصي.'
+    );
+  } finally {
+    connection.release();
+  }
+}
+async function selectNominationCandidate(req, res) {
+  const courseId = Number(req.params.courseId);
+  const nominationId = Number(req.params.nominationId);
+
+  if (
+    !Number.isInteger(courseId) || courseId <= 0 ||
+    !Number.isInteger(nominationId) || nominationId <= 0
+  ) {
+    return sendError(res, 400, 'معرّف الدورة أو الترشيح غير صالح.');
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[nomination]] = await connection.query(
+      `
+        SELECT n.id
+        FROM nominations n
+        LEFT JOIN candidates c
+          ON c.source_nomination_id = n.id
+        WHERE n.id = ?
+          AND n.course_id = ?
+          AND n.status = 'AGENT_CONFIRMED'
+          AND c.id IS NULL
+        FOR UPDATE
+      `,
+      [nominationId, courseId]
+    );
+
+    if (!nomination) {
+      throw new Error(
+        'الترشيح غير معتمد من الوكيل، أو اختارته اللجنة مسبقًا.'
+      );
+    }
+
+    await connection.query(
+      'SET @app_user_id = ?',
+      [req.user.id]
+    );
+
+    await connection.query(
+      'CALL sp_select_candidate_from_nomination(?)',
+      [nominationId]
+    );
+
+    await connection.commit();
+
+    return res.status(201).json({
+      message: 'تم اختيار المرشح بنجاح.',
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Select nomination candidate error:', error);
+
+    return sendError(
+      res,
+      400,
+      error.message || 'تعذر اختيار المرشح.'
+    );
+  } finally {
+    await connection.query('SET @app_user_id = NULL');
+    connection.release();
+  }
+}
+async function uploadCandidateAttachment(req, res) {
+  const { courseId, candidateId } = req.params;
+  const actorUserId = getActorId(req);
+
+  const attachmentType = String(
+    req.body.attachmentType || ''
+  ).trim();
+
+  const note = String(req.body.note || '').trim() || null;
+
+  const allowedTypes = [
+    'VISA',
+    'TRAVEL_TICKET',
+    'OFFICIAL_LETTER',
+    'TRAVEL_DOCUMENT',
+    'OTHER',
+  ];
+
+  if (!allowedTypes.includes(attachmentType)) {
+    return sendError(res, 400, 'نوع المستند غير صالح.');
+  }
+
+  if (!req.file) {
+    return sendError(res, 400, 'يرجى اختيار ملف للرفع.');
+  }
+
+  const connection = await pool.getConnection();
+
+  try {
+    await connection.beginTransaction();
+
+    const [[candidate]] = await connection.query(
+      `
+        SELECT
+          c.id,
+          c.employee_user_id,
+          co.title AS course_title
+        FROM candidates c
+        INNER JOIN courses co
+          ON co.id = c.course_id
+        WHERE c.id = ?
+          AND c.course_id = ?
+        FOR UPDATE
+      `,
+      [candidateId, courseId]
+    );
+
+    if (!candidate) {
+      throw new Error('المرشح غير موجود ضمن هذه الدورة.');
+    }
+
+    const checksum = crypto
+      .createHash('sha256')
+      .update(fs.readFileSync(req.file.path))
+      .digest('hex');
+
+const storageKey =
+  `candidate-attachments/${req.file.filename}`;
+      const originalName = normalizeOriginalName(req.file.originalname);
+
+    const [fileResult] = await connection.query(
+      `
+        INSERT INTO files (
+          storage_key,
+          original_name,
+          mime_type,
+          size_bytes,
+          checksum,
+          uploaded_by_user_id
+        )
+        VALUES (?, ?, ?, ?, ?, ?)
+      `,
+      [
+        storageKey,
+        originalName,
+        req.file.mimetype,
+        req.file.size,
+        checksum,
+        actorUserId,
+      ]
+    );
+
+    const [attachmentResult] = await connection.query(
+      `
+        INSERT INTO candidate_attachments (
+          candidate_id,
+          attachment_type,
+          file_id,
+          uploaded_by_user_id,
+          note
+        )
+        VALUES (?, ?, ?, ?, ?)
+      `,
+      [
+        candidateId,
+        attachmentType,
+        fileResult.insertId,
+        actorUserId,
+        note,
+      ]
+    );
+
+    await createNotification(connection, {
+      recipientUserId: candidate.employee_user_id,
+      senderUserId: actorUserId,
+      notificationType: 'CANDIDATE_ATTACHMENT_SENT',
+      title: 'تم إرسال مستند جديد لك',
+      message: `تم إرسال مستند جديد للدورة: ${candidate.course_title}.`,
+      relatedEntityType: 'CANDIDATE_ATTACHMENT',
+      relatedEntityId: attachmentResult.insertId,
+    });
+
+    await writeAuditLog(connection, {
+      actorUserId,
+      eventType: 'CANDIDATE_ATTACHMENT_UPLOADED',
+      entityType: 'CANDIDATE_ATTACHMENT',
+      entityId: attachmentResult.insertId,
+      afterData: {
+        course_id: Number(courseId),
+        candidate_id: Number(candidateId),
+        attachment_type: attachmentType,
+        note,
+      },
+    });
+
+    await connection.commit();
+
+    return res.status(201).json({
+      message: 'تم رفع المستند وإرساله للمرشح بنجاح.',
+    });
+  } catch (error) {
+    await connection.rollback();
+
+    return sendError(
+      res,
+      400,
+      error.message || 'تعذر رفع مستند المرشح.'
+    );
+  } finally {
+    connection.release();
+  }
+}
 module.exports = {
   listCourses,
   getOrganizationOptions,
@@ -2357,4 +2983,8 @@ module.exports = {
   getCandidate,
   updateCandidateStatus,
   reviewCandidateDocument,
+  reviewCandidateForm,
+  reviewProfileDocument,
+  uploadCandidateAttachment,
+  selectNominationCandidate,
 };

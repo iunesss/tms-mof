@@ -9,7 +9,12 @@ const {
   submitNominations,
   getArchive,
 } = require('../controllers/manager.courses.controller');
-
+const employeeFormUpload = require(
+  '../middleware/employee.form-upload.middleware'
+);
+const {
+  submitForm,
+} = require('../controllers/employee.courses.controller');
 const router = express.Router();
 
 router.use(authenticate);
@@ -29,5 +34,9 @@ router.post(
   express.json(),
   submitNominations
 );
-
+router.post(
+  '/:courseId/forms/:formId/submission',
+  employeeFormUpload.single('formFile'),
+  submitForm
+);
 module.exports = router;

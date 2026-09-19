@@ -39,7 +39,10 @@ function renderCourses(courses) {
   }
 
   grid.innerHTML = courses.map((course) => `
-    <article class="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-sm">
+    <a
+      href="./manage-course.html?id=${course.id}"
+      class="group block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-sm"
+    >
       <div class="flex items-center justify-between gap-3">
         <span class="rounded-lg px-2.5 py-1 text-[11px] font-bold ${statusClass(course.status)}">
           ${courseStatusText(course.status)}
@@ -67,14 +70,11 @@ function renderCourses(courses) {
           البدء: ${formatDate(course.start_date)}
         </span>
 
-        <a
-          href="./manage-course.html?id=${course.id}"
-          class="text-xs font-bold text-slate-800 transition hover:text-brand-gold"
-        >
+        <span class="text-xs font-bold text-slate-800 transition group-hover:text-brand-gold">
           التفاصيل ←
-        </a>
+        </span>
       </div>
-    </article>
+    </a>
   `).join('');
 }
 
@@ -89,13 +89,25 @@ async function loadCourses() {
 
   if (searchInput.value.trim()) params.set('search', searchInput.value.trim());
   if (typeFilter.value) params.set('type', typeFilter.value);
-  if (statusFilter.value) params.set('status', statusFilter.value);
+  
+  // إذا المستخدم اختار حالة معينة يدوياً من الفلتر، نرسلها، وإلا لا
+  if (statusFilter.value) {
+    params.set('status', statusFilter.value);
+  }
 
   try {
     const data = await api(`/api/admin/courses?${params.toString()}`);
-    const courses = data.courses || [];
+    let courses = data.courses || [];
 
-    countText.textContent = `إجمالي الدورات: ${data.total ?? courses.length}`;
+    // **الحل السحري هنا:** استبعاد المؤرشف والملغي تلقائياً من هذه الصفحة
+    // ما لم يكن المستخدم قد اختارهم صراحة من قائمة الفلتر المنسدلة
+    if (!statusFilter.value) {
+      courses = courses.filter(
+        (course) => course.status !== 'ARCHIVED' && course.status !== 'CANCELLED'
+      );
+    }
+
+    countText.textContent = `إجمالي الدورات: ${courses.length}`;
     renderCourses(courses);
   } catch (error) {
     countText.textContent = 'تعذر تحميل الدورات';

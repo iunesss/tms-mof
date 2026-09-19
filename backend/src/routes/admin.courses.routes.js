@@ -2,7 +2,14 @@ const express = require('express');
 
 const { authenticate } = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
-const { courseUpload } = require('../middleware/upload.middleware');
+
+const {
+  courseUpload,
+} = require('../middleware/upload.middleware');
+
+const candidateAttachmentUpload = require(
+  '../middleware/candidate.attachment-upload.middleware'
+);
 
 const {
   listCourses,
@@ -13,9 +20,13 @@ const {
   updateCourse,
   listCourseCandidates,
   addDirectCandidate,
+  selectNominationCandidate,
   getCandidate,
   updateCandidateStatus,
   reviewCandidateDocument,
+  reviewCandidateForm,
+  reviewProfileDocument,
+  uploadCandidateAttachment,
 } = require('../controllers/admin.courses.controller');
 
 const {
@@ -25,9 +36,6 @@ const {
 
 const router = express.Router();
 
-/*
-  يحول Arrays القادمة من FormData إلى Arrays حقيقية.
-*/
 function normalizeCourseBody(req, res, next) {
   try {
     const parseJsonArray = (value, fieldName) => {
@@ -80,11 +88,6 @@ function normalizeCourseBody(req, res, next) {
   }
 }
 
-/*
-  التحقق من حقول الدورة عبر Zod.
-  مهم: لا نستبدل req.body كليًا حتى لا نفقد courseForms
-  و removedCourseFormIds قبل وصولها إلى الـController.
-*/
 function validateBody(schema) {
   return (req, res, next) => {
     const validation = schema.safeParse(req.body);
@@ -108,19 +111,13 @@ function validateBody(schema) {
 }
 
 /*
-  الدورات مشتركة بين:
-  - Super Admin
-  - Course Manager
-
-  يشمل هذا:
-  إنشاء وتعديل الدورات، المرشحين، المستندات،
-  تفاصيل المرشح، وتفاصيل الموظف من الأرشيف.
+  الدورات مشتركة بين Super Admin و Course Manager.
 */
 router.use(authenticate);
 router.use(authorize('SUPER_ADMIN', 'COURSE_MANAGER'));
 
 /*
-  يجب أن تبقى هذه المسارات قبل /:courseId.
+  يجب أن تبقى قبل /:courseId.
 */
 router.get('/organization/options', getOrganizationOptions);
 
@@ -149,7 +146,11 @@ router.patch(
 
 /* المرشحون */
 router.get('/:courseId/candidates', listCourseCandidates);
-
+router.post(
+  '/:courseId/nominations/:nominationId/select',
+  authorize('COURSE_MANAGER'),
+  selectNominationCandidate
+);
 router.post(
   '/:courseId/candidates/direct',
   addDirectCandidate
@@ -165,9 +166,37 @@ router.patch(
   updateCandidateStatus
 );
 
+/*
+  مراجعة مستندات الدورة القديمة إن وجدت.
+*/
 router.patch(
   '/:courseId/candidates/:candidateId/documents/:documentId/review',
   reviewCandidateDocument
+);
+
+/*
+  اعتماد أو رفض الاستمارات التي يرفعها الموظف.
+*/
+router.patch(
+  '/:courseId/candidates/:candidateId/forms/:formId/review',
+  reviewCandidateForm
+);
+
+/*
+  اعتماد أو رفض جواز السفر وبقية مستندات الملف الشخصي.
+*/
+router.patch(
+  '/:courseId/candidates/:candidateId/profile-documents/:profileDocumentId/review',
+  reviewProfileDocument
+);
+
+/*
+  رفع التذكرة والفيزا والمستندات التي ترسلها الإدارة للمرشح.
+*/
+router.post(
+  '/:courseId/candidates/:candidateId/attachments',
+  candidateAttachmentUpload.single('attachmentFile'),
+  uploadCandidateAttachment
 );
 
 module.exports = router;

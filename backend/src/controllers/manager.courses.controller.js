@@ -785,8 +785,7 @@ async function submitNominations(req, res) {
             agent_user_id,
             status
           )
-          VALUES (?, ?, ?, ?, ?, 'PENDING_AGENT')
-        `,
+VALUES (?, ?, ?, ?, ?, 'SUBMITTED')        `,
         [
           courseId,
           employeeUserId,

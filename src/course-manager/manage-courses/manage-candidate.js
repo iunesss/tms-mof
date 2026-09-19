@@ -616,7 +616,7 @@ document.querySelector('#candidateAttachmentForm').addEventListener(
 );
 
 async function initialize() {
-  const session = await protectPage(['SUPER_ADMIN']);
+  const session = await protectPage(['COURSE_MANAGER']);
 
   if (!session) return;
 

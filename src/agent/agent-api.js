@@ -56,9 +56,8 @@ export function courseStatusText(status) {
 
 export function nominationStatusText(status) {
   const statuses = {
-    PENDING: 'بانتظار قرار الوكيل',
-    PENDING_AGENT: 'بانتظار قرار الوكيل',
-    AGENT_APPROVED: 'اعتمده الوكيل',
+    SUBMITTED: 'بانتظار مراجعة الوكيل',
+    AGENT_CONFIRMED: 'اعتمده الوكيل',
     AGENT_REJECTED: 'رفضه الوكيل',
     SELECTED: 'تم الاختيار',
     WITHDRAWN: 'تم السحب',

@@ -80,8 +80,8 @@ async function listCourses(req, res) {
       Math.max(Number(req.query.limit) || 9, 1),
       50
     );
-
     const offset = (page - 1) * limit;
+
     const search = String(req.query.search || '').trim();
     const type = String(req.query.type || '').trim();
     const status = String(req.query.status || '').trim();
@@ -89,7 +89,11 @@ async function listCourses(req, res) {
     const conditions = [
       'c.deleted_at IS NULL',
       'cst.sector_id = ?',
-      `c.status NOT IN ('ARCHIVED', 'COMPLETED', 'CANCELLED')`,
+      `c.status NOT IN (
+        'COMPLETED',
+        'ARCHIVED',
+        'CANCELLED'
+      )`,
     ];
 
     const values = [sector.id];
@@ -140,28 +144,17 @@ async function listCourses(req, res) {
           c.start_date,
           c.end_date,
           c.status,
-
-          COUNT(
-            DISTINCT CASE
-              WHEN n.agent_decided_by_user_id IS NULL
-                AND n.status NOT IN ('AGENT_REJECTED', 'WITHDRAWN')
-              THEN n.id
-            END
-          ) AS pending_nominations
-
+          COUNT(DISTINCT n.id) AS pending_nominations
         FROM courses c
         INNER JOIN course_sector_targets cst
           ON cst.course_id = c.id
-
+        LEFT JOIN departments d
+          ON d.sector_id = cst.sector_id
         LEFT JOIN nominations n
           ON n.course_id = c.id
-
-        LEFT JOIN departments d
-          ON d.id = n.department_id
-          AND d.sector_id = cst.sector_id
-
+          AND n.department_id = d.id
+          AND n.status = 'SUBMITTED'
         WHERE ${whereClause}
-
         GROUP BY
           c.id,
           c.course_no,
@@ -171,7 +164,6 @@ async function listCourses(req, res) {
           c.start_date,
           c.end_date,
           c.status
-
         ORDER BY c.created_at DESC
         LIMIT ? OFFSET ?
       `,
@@ -393,10 +385,7 @@ async function decideNominations(req, res) {
           AND n.course_id = ?
           AND d.sector_id = ?
           AND n.agent_decided_by_user_id IS NULL
-          AND n.status NOT IN (
-            'AGENT_REJECTED',
-            'WITHDRAWN'
-          )
+         AND n.status = 'SUBMITTED'
         FOR UPDATE
       `,
       [

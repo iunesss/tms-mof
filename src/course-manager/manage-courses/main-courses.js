@@ -43,42 +43,43 @@ function renderCourses(courses) {
   }
 
   grid.innerHTML = courses.map((course) => `
-    <article class="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-sm">
-      <div class="flex items-center justify-between gap-3">
-        <span class="rounded-lg px-2.5 py-1 text-[11px] font-bold ${statusClass(course.status)}">
-          ${courseStatusText(course.status)}
-        </span>
+    <a href="./manage-course.html?id=${encodeURIComponent(course.id)}" class="group block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-md">
+      <article class="h-full flex flex-col justify-between">
+        <div>
+          <div class="flex items-center justify-between gap-3">
+            <span class="rounded-lg px-2.5 py-1 text-[11px] font-bold ${statusClass(course.status)}">
+              ${courseStatusText(course.status)}
+            </span>
 
-        <span class="text-[11px] text-slate-400">
-          ${course.candidates_count || 0} مرشح
-        </span>
-      </div>
+            <span class="text-[11px] text-slate-400">
+              ${course.candidates_count || 0} مرشح
+            </span>
+          </div>
 
-      <p class="mt-5 text-[11px] font-semibold text-brand-gold">
-        ${course.course_type === 'MISSION' ? 'مهمة' : 'دورة تدريبية'}
-      </p>
+          <p class="mt-5 text-[11px] font-semibold text-brand-gold">
+            ${course.course_type === 'MISSION' ? 'مهمة' : 'دورة تدريبية'}
+          </p>
 
-      <h4 class="mt-1 text-sm font-bold text-slate-900">
-        ${escapeHtml(course.title)}
-      </h4>
+          <h4 class="mt-1 text-sm font-bold text-slate-900 group-hover:text-brand-gold transition">
+            ${escapeHtml(course.title)}
+          </h4>
 
-      <p class="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">
-        ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
-      </p>
+          <p class="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">
+            ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
+          </p>
+        </div>
 
-      <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-        <span class="text-[11px] text-slate-500">
-          البدء: ${formatDate(course.start_date)}
-        </span>
+        <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+          <span class="text-[11px] text-slate-500">
+            البدء: ${formatDate(course.start_date)}
+          </span>
 
-        <a
-          href="./manage-course.html?id=${encodeURIComponent(course.id)}"
-          class="text-xs font-bold text-slate-800 transition hover:text-brand-gold"
-        >
-          التفاصيل ←
-        </a>
-      </div>
-    </article>
+          <span class="text-xs font-bold text-slate-800 transition group-hover:text-brand-gold">
+            التفاصيل ←
+          </span>
+        </div>
+      </article>
+    </a>
   `).join('');
 }
 

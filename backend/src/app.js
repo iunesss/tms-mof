@@ -42,7 +42,7 @@ app.use(cookieParser());
 
 app.use(
   '/uploads',
-  express.static(path.join(__dirname, '../uploads'))
+  express.static(path.join(__dirname, '../public/uploads'))
 );
 
 app.get('/api/health', (req, res) => {
@@ -70,8 +70,6 @@ app.use('/api/employee/dashboard',employeeDashboardRoutes);
 app.use('/api/employee/courses', employeeCoursesRoutes);
 app.use('/api/employee/notifications',employeeNotificationsRoutes);
 app.use('/api/employee/profile',employeeProfileRoutes);
-
-
 app.use((req, res) => {
   res.status(404).json({
     message: 'المسار المطلوب غير موجود.',

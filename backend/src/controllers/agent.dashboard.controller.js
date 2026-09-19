@@ -69,23 +69,23 @@ async function getDashboard(req, res) {
             ON cst.course_id = c.id
           WHERE cst.sector_id = ?
             AND c.deleted_at IS NULL
-            AND c.status NOT IN ('ARCHIVED', 'CANCELLED')
+            AND c.status NOT IN (
+              'COMPLETED',
+              'ARCHIVED',
+              'CANCELLED'
+            )
         `,
         [sector.id]
       ),
 
       pool.execute(
         `
-          SELECT COUNT(*) AS total
+          SELECT COUNT(DISTINCT n.id) AS total
           FROM nominations n
           INNER JOIN departments d
             ON d.id = n.department_id
           WHERE d.sector_id = ?
-            AND n.status NOT IN (
-              'AGENT_REJECTED',
-              'WITHDRAWN'
-            )
-            AND n.agent_decided_by_user_id IS NULL
+            AND n.status = 'SUBMITTED'
         `,
         [sector.id]
       ),
@@ -108,24 +108,23 @@ async function getDashboard(req, res) {
             c.title,
             c.course_type,
             c.status,
-            COUNT(
-              DISTINCT CASE
-                WHEN n.agent_decided_by_user_id IS NULL
-                  AND n.status NOT IN ('AGENT_REJECTED', 'WITHDRAWN')
-                THEN n.id
-              END
-            ) AS pending_nominations
+            COUNT(DISTINCT n.id) AS pending_nominations
           FROM courses c
           INNER JOIN course_sector_targets cst
             ON cst.course_id = c.id
             AND cst.sector_id = ?
+          LEFT JOIN departments d
+            ON d.sector_id = cst.sector_id
           LEFT JOIN nominations n
             ON n.course_id = c.id
-          LEFT JOIN departments d
-            ON d.id = n.department_id
-            AND d.sector_id = ?
+            AND n.department_id = d.id
+            AND n.status = 'SUBMITTED'
           WHERE c.deleted_at IS NULL
-            AND c.status NOT IN ('ARCHIVED', 'CANCELLED')
+            AND c.status NOT IN (
+              'COMPLETED',
+              'ARCHIVED',
+              'CANCELLED'
+            )
           GROUP BY
             c.id,
             c.course_no,
@@ -135,7 +134,7 @@ async function getDashboard(req, res) {
           ORDER BY c.created_at DESC
           LIMIT 5
         `,
-        [sector.id, sector.id]
+        [sector.id]
       ),
 
       pool.execute(

@@ -549,6 +549,9 @@ async function initialize() {
     ]);
 
     currentCourse = courseData.course || courseData;
+
+
+
     renderExistingAttachments(currentCourse.attachments || []);
     renderExistingCourseForms(currentCourse.forms || []);
     departments = optionsData.departments || [];

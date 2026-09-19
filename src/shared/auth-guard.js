@@ -8,8 +8,10 @@ document.addEventListener('pointerdown',
   (event) => {
     if (event.button !== 0) return;
 
-    const link = event.target.closest('a[href]');
-    const url = new URL(link.href, window.location.href);   
+  const link = event.target.closest('a[href]');
+if (!link) return;
+
+const url = new URL(link.href, window.location.href);
     window.location.assign(url.href);   
   }
 );

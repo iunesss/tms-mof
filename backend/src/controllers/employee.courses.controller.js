@@ -46,9 +46,9 @@ async function getEmployeeCandidate(
   employeeUserId,
   includeArchived = false
 ) {
-  const courseStatusCondition = includeArchived
-    ? `c.status IN ('COMPLETED', 'ARCHIVED')`
-    : `c.status NOT IN ('COMPLETED', 'ARCHIVED', 'CANCELLED')`;
+const courseStatusCondition = includeArchived
+  ? `c.status != 'CANCELLED'`
+  : `c.status NOT IN ('COMPLETED', 'ARCHIVED', 'CANCELLED')`;
 
   const [[candidate]] = await connection.query(
     `
