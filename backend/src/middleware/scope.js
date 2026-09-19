@@ -1,11 +1,11 @@
 const pool = require('../config/database');
 
 function isSuperAdmin(user) {
-  return user.roles.includes('SUPER_ADMIN');
+  return user?.roles?.includes('SUPER_ADMIN') === true;
 }
 
 function isCourseManager(user) {
-  return user.roles.includes('COURSE_MANAGER');
+  return user?.roles?.includes('COURSE_MANAGER') === true;
 }
 
 function deny(res) {
@@ -20,7 +20,7 @@ function deny(res) {
 function requireOwnProfile(req, res, next) {
   const targetUserId = Number(req.params.userId);
 
-  if (isSuperAdmin(req.user) || req.user.id === targetUserId) {
+  if (isSuperAdmin(req.user) || (req.user && Number(req.user.id) === targetUserId)) {
     return next();
   }
 
@@ -128,10 +128,9 @@ async function requireCandidateAccess(req, res, next) {
 
     const candidate = rows[0];
 
-    // الموظف يرى ملف ترشيحه فقط.
+    // صاحب الترشيح يرى ملفه، بما فيه مدير القسم عند اختيار نفسه.
     if (
-      req.user.roles.includes('EMPLOYEE') &&
-      candidate.employee_user_id === req.user.id
+      String(candidate.employee_user_id) === String(req.user.id)
     ) {
       return next();
     }

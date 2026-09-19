@@ -8,7 +8,15 @@ export default defineConfig({
   server: {
     open: 'src/login/index.html',
     port: 5173,
+    fs: {
+      // الباك إند داخل جذر المشروع؛ نمنع تجاوز حماية الملفات عبر خادم Vite.
+      deny: ['.env', '.env.*', '*.{crt,pem}', '**/.git/**', '**/backend/**', '**/uploads/**'],
+    },
     proxy: {
+      '/uploads': {
+        target: 'http://localhost:3000',
+        changeOrigin: true,
+      },
       '/api': {
         target: 'http://localhost:3000',
         changeOrigin: true,

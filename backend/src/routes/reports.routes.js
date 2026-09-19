@@ -9,6 +9,7 @@ const {
   getArchivedCourses,
 } = require('../controllers/admin.reports.controller');
 
+// راوت التقارير الموحد؛ يبقى التدقيق للسوبر أدمن والأرشيف للإدارة.
 const router = express.Router();
 
 router.use(authenticate);
