@@ -38,24 +38,22 @@ async function request(url, role, method = 'GET', body) {
   return fetch(base + '/api' + url, { method, headers, body: body && JSON.stringify(body) });
 }
 
-const prefixes = ['admin', 'course-manager', 'agent', 'manager', 'employee'];
 for (let i = 0; i < roles.length; i++) {
-  test('dashboard canonical and legacy: ' + roles[i], async () => {
+  test('dashboard canonical: ' + roles[i], async () => {
     const canonical = await request('/dashboard', roles[i]);
-    const legacy = await request('/' + prefixes[i] + '/dashboard', roles[i]);
     assert.equal(canonical.status, 200);
-    assert.equal(legacy.status, 200);
-    assert.deepEqual(await canonical.json(), await legacy.json());
   });
-  test('courses canonical and legacy: ' + roles[i], async () => {
-    const oldPrefix = i === 1 ? 'admin' : prefixes[i];
+  test('courses canonical: ' + roles[i], async () => {
     const canonical = await request('/courses/9', roles[i]);
-    const legacy = await request('/' + oldPrefix + '/courses/9', roles[i]);
     assert.equal(canonical.status, 200);
-    assert.equal(legacy.status, 200);
-    assert.deepEqual(await canonical.json(), await legacy.json());
   });
 }
+
+test('obsolete role-prefixed routes are removed', async () => {
+  for (const url of ['/admin/courses', '/agent/dashboard', '/manager/profile', '/employee/courses']) {
+    assert.equal((await request(url, 'SUPER_ADMIN')).status, 404, url);
+  }
+});
 
 test('all registered private endpoints reject missing authentication', async () => {
   // نمشي على الراوتات المسجلة فعليًا حتى لا يسقط مسار جديد من فحص تسجيل الدخول.
@@ -68,9 +66,9 @@ test('all registered private endpoints reject missing authentication', async () 
       count++;
     }
   }
-  assert.ok(count > 80);
+  assert.ok(count > 30);
   for (const url of ['/dashboard', '/courses', '/profile', '/users', '/notifications',
-    '/admin/courses', '/manager/profile', '/employee/courses', '/reports/audit-logs']) {
+    '/reports/audit-logs']) {
     assert.equal((await request(url)).status, 401, url);
   }
 });
@@ -83,15 +81,15 @@ test('limited roles cannot call administrative course operations', async () => {
       ['POST', '/courses/9/nominations/1/select'],
       ['PATCH', '/courses/9/candidates/1/status'],
       ['POST', '/courses/9/candidates/1/attachments'],
-      ['GET', '/admin/courses/9'],
     ]) assert.equal((await request(url, role, method)).status, 403, role + ' ' + url);
   }
 });
 
 test('role cannot be changed through request parameters', async () => {
   const response = await request('/dashboard?role=SUPER_ADMIN', 'EMPLOYEE');
-  assert.equal((await response.json()).controller, 'employee.dashboard.controller.js');
-  assert.equal((await request('/admin/dashboard', 'EMPLOYEE')).status, 403);
+  const normal = await request('/dashboard', 'EMPLOYEE');
+  assert.deepEqual(await response.json(), await normal.json());
+  assert.equal((await request('/admin/dashboard', 'EMPLOYEE')).status, 404);
 });
 
 test('manager and employee submit forms to shared employee implementation', async () => {
@@ -99,7 +97,7 @@ test('manager and employee submit forms to shared employee implementation', asyn
     const response = await request('/courses/9/forms/1/submission', role, 'POST');
     assert.equal(response.status, 200);
     const result = await response.json();
-    assert.equal(result.controller, 'employee.courses.controller.js');
+    assert.equal(result.controller, 'courses.controller.js');
     assert.equal(result.action, 'submitForm');
   }
   assert.equal((await request('/courses/9/forms/1/submission', 'AGENT', 'POST')).status, 403);
@@ -108,16 +106,15 @@ test('manager and employee submit forms to shared employee implementation', asyn
 test('archive precedes courseId and decisions stay role-specific', async () => {
   assert.equal((await (await request('/courses/archive', 'AGENT')).json()).action, 'getArchive');
   assert.equal((await request('/courses/9/nominations/decision', 'EMPLOYEE', 'POST')).status, 403);
-  assert.equal((await (await request('/courses/9/nominations/decision', 'AGENT', 'POST')).json()).action, 'decideNominations');
+  assert.equal((await (await request('/courses/9/nominations/decision', 'AGENT', 'POST',
+    { nominationIds: [1], isConfirmed: true })).json()).action, 'decideNominations');
 });
 
-test('notifications/profile legacy payloads keep the same handlers', async () => {
+test('notifications/profile use canonical routes for eligible roles', async () => {
   for (let i = 1; i < roles.length; i++) {
     for (const resource of ['notifications', ...(i >= 3 ? ['profile'] : [])]) {
       const a = await request('/' + resource, roles[i]);
-      const b = await request('/' + prefixes[i] + '/' + resource, roles[i]);
       assert.equal(a.status, 200);
-      assert.deepEqual(await a.json(), await b.json());
     }
   }
 });
@@ -127,6 +124,19 @@ test('invalid JSON reports a request error', async () => {
     method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{',
   });
   assert.equal(response.status, 400);
+});
+
+test('write endpoints validate input before dispatching to course handlers', async () => {
+  const cases = [
+    ['SUPER_ADMIN', 'POST', '/courses/9/candidates/direct', { employeeUserId: 0 }],
+    ['SUPER_ADMIN', 'PATCH', '/courses/9/candidates/1/status', { status: 'REJECTED' }],
+    ['SUPER_ADMIN', 'PATCH', '/courses/9/candidates/1/documents/1/review', { decision: 'REJECTED' }],
+    ['AGENT', 'POST', '/courses/9/nominations/decision', { nominationIds: [1, 1], isConfirmed: true }],
+    ['DEPARTMENT_MANAGER', 'POST', '/courses/9/nominations', { employeeUserIds: [] }],
+  ];
+  for (const [role, method, url, body] of cases) {
+    assert.equal((await request(url, role, method, body)).status, 400, role + ' ' + url);
+  }
 });
 
 test('every canonical operation enforces its role before controller dispatch', async () => {
@@ -158,7 +168,8 @@ test('every canonical operation enforces its role before controller dispatch', a
         if (response.status === 200) {
           const data = await response.json();
           let prefix = resource === 'courses' && role === 'COURSE_MANAGER' ? 'admin' : controllerPrefix[role];
-          if (resource === 'courses' && route.path.includes('/forms/') && method === 'POST') prefix = 'employee';
+          if (['notifications', 'dashboard', 'profile', 'users', 'courses'].includes(resource)) prefix = resource;
+          // العملية مشتركة الآن عبر controller الدورات نفسه.
           assert.ok(data.controller.startsWith(prefix + '.'), role + ' used ' + data.controller);
         }
       }

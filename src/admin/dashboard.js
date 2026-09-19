@@ -156,7 +156,7 @@ function setSummary(summary) {
 }
 
 async function loadDashboard() {
-  const response = await fetch('/api/admin/dashboard', {
+  const response = await fetch('/api/dashboard', {
     credentials: 'include',
     cache: 'no-store',
   });

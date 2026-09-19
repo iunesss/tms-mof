@@ -177,7 +177,7 @@ async function loadCourses() {
   if (type) query.set('type', type);
   if (status) query.set('status', status);
 
-  const data = await api(`/api/manager/courses?${query}`);
+  const data = await api(`/api/courses?${query}`);
 
   const courses = data.courses || [];
   const pagination = data.pagination || {

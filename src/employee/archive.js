@@ -89,7 +89,7 @@ async function initialize() {
   if (!user) return;
 
   try {
-    const data = await api('/api/employee/courses/archive');
+    const data = await api('/api/courses/archive');
     renderArchive(data.courses || []);
   } catch (error) {
     document.querySelector('#archiveTableBody').innerHTML = `

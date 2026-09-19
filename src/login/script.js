@@ -110,6 +110,9 @@ loginForm.addEventListener('submit', async (event) => {
   } finally {
     setLoading(false);
   }
+});
+
+// عند الرجوع إلى صفحة الدخول من ذاكرة المتصفح نمسح الحقول الحساسة والرسالة القديمة.
 window.addEventListener('pageshow', function (event) {
     // التحقق مما إذا كانت الصفحة قد تم استرجاعها من ذاكرة المتصفح المؤقتة (عند الضغط على زر الرجوع)
     if (event.persisted || (performance.getEntriesByType("navigation")[0]?.type === "back_forward")) {
@@ -126,5 +129,4 @@ window.addEventListener('pageshow', function (event) {
             formMessage.textContent = '';
         }
     }
-});
 });

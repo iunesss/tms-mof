@@ -144,7 +144,7 @@ function renderPagination(pagination) {
 
 async function loadLogs() {
   try {
-    const data = await api(`/api/admin/reports/audit-logs?${buildQuery()}`);
+    const data = await api(`/api/reports/audit-logs?${buildQuery()}`);
     renderLogs(data.logs || []);
     renderPagination(data.pagination);
   } catch (error) {
@@ -157,7 +157,7 @@ async function loadLogs() {
 }
 
 async function loadEventTypes() {
-  const data = await api('/api/admin/reports/audit-logs/event-types');
+  const data = await api('/api/reports/audit-logs/event-types');
   const select = document.querySelector('#auditEventType');
 
   select.innerHTML = `

@@ -1,6 +1,15 @@
 import { defineConfig } from 'vite';
 import tailwindcss from '@tailwindcss/vite';
 import { resolve } from 'node:path';
+import { globSync } from 'node:fs';
+
+// إدراج جميع صفحات الأدوار في البناء متعدد الصفحات.
+const pageInputs = Object.fromEntries(
+  globSync('src/**/*.html').map((file) => [
+    file.replace(/[\\/]/g, '-').replace(/\.html$/, ''),
+    resolve(import.meta.dirname, file),
+  ])
+);
 
 export default defineConfig({
   plugins: [tailwindcss()],
@@ -25,16 +34,6 @@ export default defineConfig({
   },
 
   build: {
-    rollupOptions: {
-      input: {
-        login: resolve(import.meta.dirname, 'src/login/index.html'),
-        unauthorized: resolve(import.meta.dirname, 'src/login/unauthorized.html'),
-        adminDashboard: resolve(import.meta.dirname, 'src/admin/dashboard.html'),
-        courseManagerDashboard: resolve(import.meta.dirname, 'src/course-manager/dashboard.html'),
-        agentDashboard: resolve(import.meta.dirname, 'src/agent/dashboard.html'),
-        managerDashboard: resolve(import.meta.dirname, 'src/manager/dashboard.html'),
-        employeeDashboard: resolve(import.meta.dirname, 'src/employee/dashboard.html'),
-      },
-    },
+    rollupOptions: { input: pageInputs },
   },
 });

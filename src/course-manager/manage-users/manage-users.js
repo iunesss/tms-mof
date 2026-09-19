@@ -182,7 +182,7 @@ async function loadUsers() {
   if (status) query.set('status', status);
 
   const response = await fetch(
-    `/api/course-manager/users?${query.toString()}`,
+    `/api/users?${query.toString()}`,
     {
       credentials: 'include',
       cache: 'no-store',
@@ -230,7 +230,7 @@ async function loadNotificationsBadge() {
 
   try {
     const response = await fetch(
-      '/api/course-manager/notifications?page=1&limit=1&readStatus=UNREAD',
+      '/api/notifications?page=1&limit=1&readStatus=UNREAD',
       {
         credentials: 'include',
         cache: 'no-store',

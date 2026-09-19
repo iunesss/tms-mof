@@ -1,5 +1,6 @@
 const { z } = require('zod');
 
+/** الأدوار التي يمكن إنشاؤها من إدارة المستخدمين. */
 const roleCodeSchema = z.enum([
   'COURSE_MANAGER',
   'AGENT',
@@ -7,6 +8,7 @@ const roleCodeSchema = z.enum([
   'EMPLOYEE',
 ]);
 
+/** بيانات الربط التنظيمي، وتختلف الحقول المطلوبة حسب دور الحساب. */
 const assignmentSchema = z.object({
   sectorName: z.string().trim().min(2).max(150).nullable().optional(),
   agentUserId: z.coerce.number().int().positive().nullable().optional(),
@@ -43,6 +45,7 @@ const userBaseSchema = z.object({
   assignment: assignmentSchema,
 });
 
+/** يمنع إنشاء وكيل أو مدير أو موظف دون ارتباطه التنظيمي اللازم. */
 function validateAssignmentByRole(data, ctx) {
   const assignment = data.assignment || {};
 

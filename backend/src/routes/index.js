@@ -15,21 +15,4 @@ router.use('/profile', profile());
 router.use('/users', users());
 router.use('/reports', reports);
 
-// مسارات توافق للواجهات الحالية؛ جميعها تستخدم التعريف الموحد نفسه دون إعادة توجيه HTTP.
-const legacyResources = {
-  admin: { role: 'SUPER_ADMIN', resources: { dashboard, users } },
-  'course-manager': { role: 'COURSE_MANAGER', resources: { dashboard, users, notifications } },
-  agent: { role: 'AGENT', resources: { dashboard, courses, notifications } },
-  manager: { role: 'DEPARTMENT_MANAGER', resources: { dashboard, courses, notifications, profile } },
-  employee: { role: 'EMPLOYEE', resources: { dashboard, courses, notifications, profile } },
-};
-for (const [prefix, { role, resources }] of Object.entries(legacyResources)) {
-  for (const [name, createRouter] of Object.entries(resources)) {
-    router.use(`/${prefix}/${name}`, createRouter(role));
-  }
-}
-// هذا الرابط مشترك تاريخيًا بين السوبر أدمن ومدير الدورة؛ لا نثبته على دور السوبر أدمن.
-router.use('/admin/courses', courses('COURSE_MANAGER'));
-router.use('/admin/reports', reports);
-
 module.exports = router;

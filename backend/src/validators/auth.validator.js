@@ -1,5 +1,5 @@
 const { z } = require('zod');
-//تعريف مواصفات مدخلات المستخدم
+/** مدخلات تسجيل الدخول؛ الحقول الإضافية لا تدخل في عملية المصادقة. */
 const loginSchema = z.object({
   username: z
     .string()

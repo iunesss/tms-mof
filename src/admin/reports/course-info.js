@@ -59,8 +59,8 @@ async function initialize() {
 
   try {
     const [courseData, candidatesData] = await Promise.all([
-      api(`/api/admin/courses/${courseId}`),
-      api(`/api/admin/courses/${courseId}/candidates`),
+      api(`/api/courses/${courseId}`),
+      api(`/api/courses/${courseId}/candidates`),
     ]);
 
     const course = courseData.course || courseData;
@@ -83,6 +83,18 @@ async function initialize() {
         : course.status === 'COMPLETED' ? 'مكتملة'
           : course.status === 'CANCELLED' ? 'ملغاة'
             : course.status;
+
+    if (course.status === 'COMPLETED') {
+      const link = document.querySelector('#archiveCompletedCourseLink');
+      link.href = `../manage-courses/alter-course.html?id=${encodeURIComponent(courseId)}`;
+      link.classList.remove('hidden');
+    }
+    if (course.final_report?.file_url) {
+      const link = document.querySelector('#finalReportDownload');
+      link.href = course.final_report.file_url;
+      link.textContent = `عرض التقرير: ${course.final_report.original_name}`;
+      document.querySelector('#finalReportDisplay').classList.remove('hidden');
+    }
 
     renderCandidates(candidates);
     renderFiles('#courseAttachmentsList', course.attachments, 'لا توجد مرفقات.');

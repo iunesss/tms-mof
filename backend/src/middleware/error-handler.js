@@ -6,6 +6,7 @@ function notFound(req, res) {
 }
 
 /** معالج Express المركزي: يميز أخطاء الطلب والرفع عن أعطال الخادم دون كشف التفاصيل. */
+// لان الباراميتر الاول هو ايرور فيعتبر جلوبل ايرور هاندلر
 function errorHandler(error, req, res, next) {
   if (res.headersSent) return next(error);
   if (error instanceof multer.MulterError) {
@@ -15,12 +16,15 @@ function errorHandler(error, req, res, next) {
         : 'حقول الملفات أو عددها غير صالح.',
     });
   }
+  // بيانات جيسون غير صالحه
   if (error.type === 'entity.parse.failed') {
     return res.status(400).json({ message: 'صيغة JSON غير صالحة.' });
   }
+  // باي لود جيسون كبير
   if (error.type === 'entity.too.large') {
     return res.status(413).json({ message: 'حجم الطلب أكبر من الحد المسموح.' });
   }
+
   if (error.status === 400 || error.message?.includes('نوع الملف غير مسموح')) {
     return res.status(400).json({ message: error.message });
   }

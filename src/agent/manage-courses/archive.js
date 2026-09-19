@@ -134,7 +134,7 @@ function renderPagination(pagination) {
 async function loadArchive() {
   try {
     const data = await api(
-      `/api/agent/courses/archive?${buildQuery()}`
+      `/api/courses/archive?${buildQuery()}`
     );
 
     renderYears(data.years || []);

@@ -111,6 +111,35 @@ href="./manage-candidate.html?courseId=${courseId}&candidateId=${candidate.id}&f
   `).join('');
 }
 
+/** يعرض الترشيحات المعتمدة من الوكيل؛ اختيار اللجنة ينشئ سجل candidate مستقلًا. */
+function renderApprovedNominations(items = []) {
+  const list = document.querySelector('#approvedNominationsList');
+  list.replaceChildren();
+
+  if (!items.length) {
+    list.textContent = 'لا توجد ترشيحات معتمدة بانتظار الاختيار.';
+    return;
+  }
+
+  for (const item of items) {
+    const row = document.createElement('div');
+    row.className = 'flex flex-wrap items-center justify-between gap-3 rounded-lg border border-slate-200 p-3';
+
+    const details = document.createElement('p');
+    details.className = 'text-xs text-slate-700';
+    details.textContent = `${item.full_name} — ${item.department_name} — ${item.sector_name} — ${item.employee_number || 'بدون رقم وظيفي'}`;
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.selectNomination = String(item.id);
+    button.className = 'rounded-lg bg-brand-gold px-3 py-2 text-xs font-bold text-white disabled:opacity-50';
+    button.textContent = 'اختيار مرشح';
+
+    row.append(details, button);
+    list.append(row);
+  }
+}
+
 function renderAttachments(attachments) {
   const container = document.querySelector('#courseAttachmentsList');
 
@@ -159,12 +188,13 @@ async function initialize() {
 
   try {
     const [courseData, candidatesData] = await Promise.all([
-      api(`/api/admin/courses/${courseId}`),
-      api(`/api/admin/courses/${courseId}/candidates`),
+      api(`/api/courses/${courseId}`),
+      api(`/api/courses/${courseId}/candidates`),
     ]);
 
     const course = courseData.course || courseData;
     const candidates = candidatesData.candidates || [];
+    const approvedNominations = candidatesData.approvedNominations || [];
 
     setText('#courseTitle', course.title);
     setText('#courseNumber', course.course_no || 'بدون رقم');
@@ -207,6 +237,10 @@ async function initialize() {
 renderCourseForms(course.forms || []);
     renderAllocations(course.allocations || []);
     renderCandidates(candidates);
+    document.querySelector('#approvedNominationsSection').classList.toggle(
+      'hidden', course.course_type !== 'TRAINING'
+    );
+    renderApprovedNominations(approvedNominations);
     renderAttachments(course.attachments || []);
     configureMissionSection(course);
   } catch (error) {
@@ -270,4 +304,30 @@ function renderCourseForms(forms = []) {
     </div>
   `;
 }
+/** ينفذ الاختيار مرة واحدة، ثم يحدّث القائمتين من استجابة الباك إند. */
+document.querySelector('#approvedNominationsList').addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-select-nomination]');
+  if (!button) return;
+
+  const nominationId = Number(button.dataset.selectNomination);
+  if (!Number.isInteger(nominationId) || nominationId <= 0) return;
+
+  button.disabled = true;
+  button.textContent = 'جارٍ الاختيار...';
+
+  try {
+    await api(`/api/courses/${courseId}/nominations/${nominationId}/select`, {
+      method: 'POST',
+    });
+    const data = await api(`/api/courses/${courseId}/candidates`);
+    renderApprovedNominations(data.approvedNominations || []);
+    renderCandidates(data.candidates || []);
+    setText('#candidatesCount', String((data.candidates || []).length));
+  } catch (error) {
+    showPageError(error.message);
+    button.disabled = false;
+    button.textContent = 'اختيار مرشح';
+  }
+});
+
 initialize();

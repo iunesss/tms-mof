@@ -243,7 +243,7 @@ async function decideSelectedNominations(isConfirmed, reason = null) {
 
   try {
     const data = await api(
-      `/api/agent/courses/${courseId}/nominations/decision`,
+      `/api/courses/${courseId}/nominations/decision`,
       {
         method: 'POST',
         headers: {
@@ -314,7 +314,7 @@ async function confirmRejectNominations() {
 }
 
 async function loadCourseInfo() {
-  const data = await api(`/api/agent/courses/${courseId}`);
+  const data = await api(`/api/courses/${courseId}`);
   fillCourseData(data);
 }
 

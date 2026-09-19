@@ -1,7 +1,6 @@
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const pool = require('../config/database');
-const { loginSchema } = require('../validators/auth.validator');
 
 //فنكشن خاص بخفظ كوكيز المستخدم
 function getCookieOptions(rememberMe = false) {
@@ -20,16 +19,8 @@ function getCookieOptions(rememberMe = false) {
 
 async function login(req, res, next) {
   try {
-    //جلب معلومات الفاليديشن من الفاليديتور
-    const validation = loginSchema.safeParse(req.body);
-//فحص بياناات المستخدم هل هي طبق المواصفات
-    if (!validation.success) {
-      return res.status(400).json({
-        message: validation.error.issues[0].message,
-      });
-    }
-//ديستركشر
-    const { username, password, rememberMe } = validation.data;
+    // وصل الطلب بعد التحقق من المدخلات والحد من المحاولات في auth.routes.js.
+    const { username, password, rememberMe } = req.body;
 //استعلام لقاعده البيانات 
     const [rows] = await pool.execute(
       `

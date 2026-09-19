@@ -15,9 +15,8 @@ async function main() {
   let checks = 0;
   try {
     const [[department]] = await pool.query('SELECT id FROM departments WHERE deleted_at IS NULL ORDER BY id LIMIT 1');
-    for (const [role, prefix] of [
-      ['SUPER_ADMIN', 'admin'], ['COURSE_MANAGER', 'course-manager'],
-      ['AGENT', 'agent'], ['DEPARTMENT_MANAGER', 'manager'], ['EMPLOYEE', 'employee'],
+    for (const role of [
+      'SUPER_ADMIN', 'COURSE_MANAGER', 'AGENT', 'DEPARTMENT_MANAGER', 'EMPLOYEE',
     ]) {
       const [rows] = await pool.query(
         `SELECT DISTINCT u.id FROM users u
@@ -36,15 +35,20 @@ async function main() {
         continue;
       }
       const token = jwt.sign({ userId: rows[0].id }, process.env.JWT_SECRET, { expiresIn: '5m' });
-      const urls = ['/dashboard', '/' + prefix + '/dashboard', '/courses',
-        '/' + (role === 'COURSE_MANAGER' ? 'admin' : prefix) + '/courses'];
-      if (role !== 'SUPER_ADMIN') urls.push('/notifications', '/' + prefix + '/notifications');
-      if (['EMPLOYEE', 'DEPARTMENT_MANAGER'].includes(role)) urls.push('/profile', '/' + prefix + '/profile');
+      const urls = ['/dashboard', '/courses'];
+      if (role !== 'SUPER_ADMIN') {
+        urls.push('/notifications',
+          '/notifications?category=GENERAL&page=1&limit=5',
+          '/notifications?readStatus=UNREAD&search=course');
+      }
+      if (['EMPLOYEE', 'DEPARTMENT_MANAGER'].includes(role)) urls.push('/profile');
       if (['EMPLOYEE', 'DEPARTMENT_MANAGER', 'AGENT'].includes(role)) urls.push('/courses/archive');
       if (['SUPER_ADMIN', 'COURSE_MANAGER'].includes(role)) {
         urls.push('/users', '/courses/organization/options',
-          '/courses/eligible-employees?departmentId=' + department.id, '/reports/archive', '/courses/archive');
+          '/courses/eligible-employees?departmentId=' + department.id,
+          '/reports/archive', '/reports/archive?page=1&limit=5', '/courses/archive');
       }
+      if (role === 'SUPER_ADMIN') urls.push('/reports/audit-logs?page=1&limit=5');
       const base = 'http://127.0.0.1:' + server.address().port + '/api';
       for (const url of urls) {
         const response = await fetch(base + url, { headers: { Cookie: 'tms_token=' + token } });
@@ -59,6 +63,15 @@ async function main() {
         if (url.endsWith('/candidates') && data.candidates?.length) {
           urls.push(url + '/' + data.candidates[0].id);
         }
+        // حالة 200 وحدها لا تكفي؛ تأكد من أن dispatcher اختار نطاق الدور الصحيح.
+        if (url === '/dashboard' && response.status === 200) {
+          const scope = {
+            AGENT: 'sector', DEPARTMENT_MANAGER: 'department', EMPLOYEE: 'employee',
+          }[role];
+          if (!data.summary || (scope && !data[scope])) failures++;
+        }
+        if (url === '/courses' && response.status === 200 && !Array.isArray(data.courses)) failures++;
+        if (url === '/notifications' && response.status === 200 && !Array.isArray(data.notifications)) failures++;
         checks++;
         if (response.status !== 200) failures++;
         console.log(role + ' ' + url + ': ' + response.status);

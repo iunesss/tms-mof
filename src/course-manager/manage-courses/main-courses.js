@@ -105,7 +105,7 @@ async function loadCourses() {
   }
 
   try {
-    const data = await api(`/api/admin/courses?${params.toString()}`);
+    const data = await api(`/api/courses?${params.toString()}`);
     const courses = data.courses || [];
 
     countText.textContent =
@@ -130,7 +130,7 @@ async function loadNotificationsBadge() {
 
   try {
     const data = await api(
-      '/api/course-manager/notifications?page=1&limit=1&readStatus=UNREAD'
+      '/api/notifications?page=1&limit=1&readStatus=UNREAD'
     );
 
     const unreadCount = Number(data.unreadCount || 0);

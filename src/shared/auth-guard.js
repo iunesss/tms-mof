@@ -1,20 +1,6 @@
 const loginPage = '/src/login/index.html';
 const unauthorizedPage = '/src/login/unauthorized.html';
-/*
-  يبدأ الانتقال من لحظة الضغط على الرابط.
-  لذلك خروج الماوس بسرعة بعد الضغط لن يلغي التنقل.
-*/
-document.addEventListener('pointerdown',
-  (event) => {
-    if (event.button !== 0) return;
-
-  const link = event.target.closest('a[href]');
-if (!link) return;
-
-const url = new URL(link.href, window.location.href);
-    window.location.assign(url.href);   
-  }
-);
+// الروابط يتعامل معها المتصفح مباشرة؛ لا نعترض pointerdown كي لا يحدث انتقال مزدوج.
 
 let isLeavingPage = false;
 

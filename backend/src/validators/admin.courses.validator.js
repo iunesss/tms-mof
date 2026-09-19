@@ -1,5 +1,6 @@
 const { z } = require('zod');
 
+/** يحول أرقام FormData النصية إلى معرّفات موجبة. */
 function positiveInteger(label) {
   return z.preprocess(
     (value) => {
@@ -22,6 +23,7 @@ function positiveInteger(label) {
   );
 }
 
+/** يحول الحقل الاختياري الفارغ إلى null قبل حفظه. */
 function optionalText(maxLength = 1000) {
   return z.preprocess(
     (value) => {
@@ -35,9 +37,11 @@ function optionalText(maxLength = 1000) {
   );
 }
 
+/** غياب القائمة يعني عدم الاختيار، أما القيمة غير القائمة فخطأ إدخال. */
 const idArraySchema = z.preprocess(
   (value) => {
-    if (!Array.isArray(value)) return [];
+    if (value === undefined || value === null) return [];
+    if (!Array.isArray(value)) return value;
 
     return value.map((item) => {
       const numberValue = Number(item);
@@ -84,12 +88,15 @@ const courseFormSchema = z.object({
 
   isRequired: z.preprocess(
     (value) =>
+      value === undefined ||
       value === true ||
       value === 'true' ||
       value === 1 ||
       value === '1',
     z.boolean()
   ),
+
+  dueAt: optionalText(30),
 
   fileIndex: z.preprocess(
     (value) => {
@@ -139,8 +146,7 @@ const baseCourseSchema = z.object({
 
   totalSeats: positiveInteger('إجمالي المقاعد النهائية'),
 
-  status: z
-  .enum([
+  status: z.enum([
     'DRAFT',
     'OPEN_FOR_NOMINATION',
     'ACTIVE',
@@ -151,9 +157,7 @@ const baseCourseSchema = z.object({
     errorMap: () => ({
       message: 'حالة الدورة غير صالحة.',
     }),
-  })
-  .optional()
-  .default('DRAFT'),
+  }).optional().default('DRAFT'),
   allocations: z
     .array(allocationSchema)
     .min(1, 'أضف قسمًا واحدًا على الأقل.'),
@@ -161,10 +165,17 @@ const baseCourseSchema = z.object({
   directEmployeeIds: idArraySchema.optional().default([]),
   courseForms: z.array(courseFormSchema).optional().default([]),
 
-removedCourseFormIds: removedCourseFormIdsSchema.optional().default([]),
+  removedCourseFormIds: removedCourseFormIdsSchema.optional().default([]),
 });
 
 const createCourseSchema = baseCourseSchema.superRefine((data, context) => {
+  if (!['DRAFT', 'ACTIVE', 'OPEN_FOR_NOMINATION'].includes(data.status)) {
+    context.addIssue({
+      code: z.ZodIssueCode.custom,
+      path: ['status'],
+      message: 'يمكن إنشاء الدورة كمسودة أو نشطة فقط.',
+    });
+  }
   if (data.courseType === 'TRAINING' && !data.nominationDeadline) {
     context.addIssue({
       code: z.ZodIssueCode.custom,
@@ -195,12 +206,4 @@ const updateCourseSchema = baseCourseSchema.superRefine((data, context) => {
 module.exports = {
   createCourseSchema,
   updateCourseSchema,
-
-  /*
-    أسماء توافقية للـController القديم.
-    تمنع خطأ safeParse of undefined إلى أن يكون كل الكود موحدًا.
-  */
-  courseSchema: createCourseSchema,
-  courseDataSchema: createCourseSchema,
-  coursePayloadSchema: createCourseSchema,
 };

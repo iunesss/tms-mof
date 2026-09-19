@@ -120,7 +120,7 @@ function renderNotifications(notifications) {
 }
 
 async function loadDashboard() {
-  const data = await api('/api/agent/dashboard');
+  const data = await api('/api/dashboard');
 
   const summary = data.summary || {};
 

@@ -139,7 +139,7 @@ async function initialize() {
   document.querySelector('#logoutButton').addEventListener('click', logout);
 
   try {
-    const data = await api('/api/employee/courses');
+    const data = await api('/api/courses');
     if (!data) return;
 
     renderCourses(data.courses || []);

@@ -158,7 +158,7 @@ async function loadCourses() {
   if (status) query.set('status', status);
 
   try {
-    const data = await api(`/api/agent/courses?${query.toString()}`);
+    const data = await api(`/api/courses?${query.toString()}`);
 
     const courses = data.courses || [];
     const pagination = data.pagination || {

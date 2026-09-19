@@ -183,8 +183,8 @@ async function initialize() {
 
   try {
     const [courseData, candidatesData] = await Promise.all([
-      api(`/api/admin/courses/${courseId}`),
-      api(`/api/admin/courses/${courseId}/candidates`),
+      api(`/api/courses/${courseId}`),
+      api(`/api/courses/${courseId}/candidates`),
     ]);
 
     const course = courseData.course || courseData;
@@ -312,12 +312,12 @@ document.querySelector('#approvedNominationsList')
 
     try {
       await api(
-        `/api/admin/courses/${courseId}/nominations/${nominationId}/select`,
+        `/api/courses/${courseId}/nominations/${nominationId}/select`,
         { method: 'POST' }
       );
 
       const data = await api(
-        `/api/admin/courses/${courseId}/candidates`
+        `/api/courses/${courseId}/candidates`
       );
 
       renderApprovedNominations(data.approvedNominations || []);

@@ -41,7 +41,7 @@ async function initialize() {
 
   try {
     const data = await api(
-      `/api/admin/courses/${courseId}/candidates/${candidateId}`
+      `/api/courses/${courseId}/candidates/${candidateId}`
     );
 
     const candidate = data.candidate || data;

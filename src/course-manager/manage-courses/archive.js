@@ -5,7 +5,6 @@ import {
   escapeHtml,
   formatDate,
   courseStatusText,
-  logout,
 } from '../manage-courses/course-api.js';
 
 const state = {
@@ -162,7 +161,7 @@ function renderPagination(pagination) {
 async function loadArchive() {
   try {
     const data = await api(
-      `/api/admin/reports/archive?${buildQuery()}`
+      `/api/reports/archive?${buildQuery()}`
     );
 
     renderYears(data.years || []);
@@ -221,26 +220,10 @@ document.querySelector('#archiveSearch').addEventListener('keydown', (event) => 
   }
 });
 
-const logoutButton = document.querySelector('#logoutButton');
-
-if (logoutButton) {
-  logoutButton.addEventListener('click', logout);
-}
-
 async function initialize() {
   const session = await protectPage(['COURSE_MANAGER']);
 
   if (!session) return;
-
-  const currentUserName = document.querySelector('#currentUserName');
-
-  if (currentUserName) {
-    currentUserName.textContent =
-      session.fullName ||
-      session.full_name ||
-      session.username ||
-      'مدير الدورة';
-  }
 
   await loadArchive();
 }

@@ -69,6 +69,22 @@ function renderAttachments(attachments) {
   `).join('');
 }
 
+/** يعرض الملفات المرسلة لهذا المرشح فقط، وليس المرفقات العامة للدورة. */
+function renderCandidateAttachments(attachments = []) {
+  const container = document.querySelector('#candidateAttachmentsList');
+  if (!attachments.length) {
+    container.textContent = 'لم تُرسل لك تذكرة أو تأشيرة أو مستندات خاصة حتى الآن.';
+    return;
+  }
+
+  container.innerHTML = attachments.map((attachment) => `
+    <a href="${escapeHtml(attachment.file_url)}" target="_blank" rel="noopener"
+       class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 font-semibold text-brand-darkGold">
+      ${escapeHtml(attachment.attachment_type)}: ${escapeHtml(attachment.original_name)}
+    </a>
+  `).join('');
+}
+
 function renderForms(forms) {
   const container = document.querySelector('#courseFormsList');
 
@@ -103,6 +119,13 @@ function renderForms(forms) {
           تحميل الاستمارة
         </a>
       </div>
+
+      ${form.submitted_file_url ? `
+        <a href="${escapeHtml(form.submitted_file_url)}" target="_blank" rel="noopener"
+           class="mt-3 inline-block text-[11px] font-semibold text-brand-darkGold underline">
+          عرض نسختي المرفوعة
+        </a>
+      ` : ''}
 
       <div class="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
@@ -147,7 +170,7 @@ async function uploadForm(formId, button) {
 
   try {
     const data = await api(
-      `/api/employee/courses/${courseId}/forms/${formId}/submission`,
+      `/api/courses/${courseId}/forms/${formId}/submission`,
       {
         method: 'POST',
         body: formData,
@@ -160,6 +183,7 @@ async function uploadForm(formId, button) {
     );
 
     fileInput.value = '';
+    await loadCourse();
   } catch (error) {
     showFormsMessage(error.message);
   } finally {
@@ -202,7 +226,14 @@ function fillPage(data) {
     candidate.status || '—';
 
   renderForms(data.forms || []);
+  renderCandidateAttachments(data.candidateAttachments || []);
   renderAttachments(data.attachments || []);
+}
+
+/** يجدد بيانات الدورة وحالة الاستمارات بعد أي رفع ناجح. */
+async function loadCourse() {
+  const data = await api(`/api/courses/${courseId}`);
+  fillPage(data);
 }
 
 async function initialize() {
@@ -215,8 +246,7 @@ async function initialize() {
   }
 
   try {
-    const data = await api(`/api/employee/courses/${courseId}`);
-    fillPage(data);
+    await loadCourse();
   } catch (error) {
     document.querySelector('#courseTitle').textContent =
       error.message || 'تعذر تحميل تفاصيل الدورة.';

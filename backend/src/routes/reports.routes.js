@@ -2,12 +2,14 @@ const express = require('express');
 
 const { authenticate } = require('../middleware/authenticate');
 const { authorize } = require('../middleware/authorize');
+const { validate } = require('../middleware/validate');
+const { auditLogsQuerySchema, archiveQuerySchema } = require('../validators/reports.validator');
 
 const {
   getAuditLogs,
   getAuditEventTypes,
   getArchivedCourses,
-} = require('../controllers/admin.reports.controller');
+} = require('../controllers/reports.controller');
 
 // راوت التقارير الموحد؛ يبقى التدقيق للسوبر أدمن والأرشيف للإدارة.
 const router = express.Router();
@@ -26,6 +28,7 @@ router.get(
 router.get(
   '/audit-logs',
   authorize('SUPER_ADMIN'),
+  validate(auditLogsQuerySchema, 'query'),
   getAuditLogs
 );
 
@@ -35,6 +38,7 @@ router.get(
 router.get(
   '/archive',
   authorize('SUPER_ADMIN', 'COURSE_MANAGER'),
+  validate(archiveQuerySchema, 'query'),
   getArchivedCourses
 );
 

@@ -1,4 +1,5 @@
 import { protectPage } from '../shared/auth-guard.js';
+import { notify } from '../shared/notify.js';
 
 const state = {
   page: 1,
@@ -135,7 +136,7 @@ function renderNotifications(notifications) {
 
       try {
         await api(
-          `/api/employee/notifications/${notificationId}/read`,
+          `/api/notifications/${notificationId}/read`,
           { method: 'PATCH' }
         );
 
@@ -184,7 +185,7 @@ async function loadNotifications() {
   if (category) params.set('category', category);
   if (search) params.set('search', search);
 
-  const data = await api(`/api/employee/notifications?${params}`);
+  const data = await api(`/api/notifications?${params}`);
 
   if (!data) return;
 
@@ -244,13 +245,14 @@ async function initialize() {
     'click',
     async () => {
       try {
-        await api('/api/employee/notifications/read-all', {
+        await api('/api/notifications/read-all', {
           method: 'PATCH',
         });
 
         await loadNotifications();
+        notify('تم تحديد جميع الإشعارات كمقروءة.', 'success');
       } catch (error) {
-        window.alert(error.message);
+        notify(error.message);
       }
     }
   );

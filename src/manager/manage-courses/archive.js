@@ -37,14 +37,6 @@ async function api(url, options = {}) {
   return data;
 }
 
-async function logout() {
-  try {
-    await api('/api/auth/logout', { method: 'POST' });
-  } finally {
-    window.location.replace('/src/login/index.html');
-  }
-}
-
 function buildQuery() {
   const params = new URLSearchParams({
     page: String(state.page),
@@ -126,7 +118,7 @@ function renderPagination(pagination) {
 
 async function loadArchive() {
   try {
-    const data = await api(`/api/manager/courses/archive?${buildQuery()}`);
+    const data = await api(`/api/courses/archive?${buildQuery()}`);
 
     renderYears(data.years || []);
     renderCourses(data.courses || []);
@@ -149,11 +141,6 @@ async function loadArchive() {
 async function initialize() {
   const user = await protectPage(['DEPARTMENT_MANAGER']);
   if (!user) return;
-
-  document.querySelector('#currentUserName').textContent =
-    user.fullName || user.full_name || user.username || 'مدير القسم';
-
-  document.querySelector('#logoutButton').onclick = logout;
 
   document.querySelector('#searchArchiveButton').onclick = () => {
     state.page = 1;

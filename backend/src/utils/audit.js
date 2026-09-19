@@ -1,3 +1,4 @@
+/** يسجل التغيير داخل transaction العملية الأصلية ويكشف الحقول الناقصة مبكرًا. */
 async function writeAuditLog(
   connection,
   {
@@ -9,6 +10,11 @@ async function writeAuditLog(
     afterData = null,
   }
 ) {
+  // التحقق من صحة المعطيات المدخلة
+  if (!connection?.query || !eventType || !entityType || entityId == null) {
+    throw new TypeError('Audit log requires a connection, eventType, entityType and entityId.');
+  }
+
   await connection.query(
     `
       INSERT INTO audit_logs (

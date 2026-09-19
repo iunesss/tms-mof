@@ -2,7 +2,6 @@ import { protectPage } from '../../shared/auth-guard.js';
 
 const userId = new URLSearchParams(window.location.search).get('id');
 
-let editedUser = null;
 let organizationOptions = {
   agents: [],
   managers: [],
@@ -283,7 +282,7 @@ async function fetchJson(url, options = {}) {
 async function loadOrganizationOptions() {
   try {
 const data = await fetchJson(
-  '/api/course-manager/users/organization/options'
+  '/api/users/organization/options'
 );
     organizationOptions = {
       agents: Array.isArray(data.agents) ? data.agents : [],
@@ -304,12 +303,11 @@ const data = await fetchJson(
 
 async function loadUser() {
 const data = await fetchJson(
-  `/api/course-manager/users/${userId}`
+  `/api/users/${userId}`
 );  return data.user || data;
 }
 
 function fillUserForm(user) {
-  editedUser = user;
 
   const roleCode = getRoleCode(user);
   const assignment = getAssignment(user);
@@ -431,7 +429,7 @@ form.addEventListener('submit', async (event) => {
   saveButton.textContent = 'جارِ حفظ التعديلات...';
 
   try {
-await fetchJson(`/api/course-manager/users/${userId}`, {
+await fetchJson(`/api/users/${userId}`, {
           method: 'PATCH',
       headers: {
         'Content-Type': 'application/json',
@@ -440,7 +438,7 @@ await fetchJson(`/api/course-manager/users/${userId}`, {
     });
 
     if (pendingStatusChange) {
-await fetchJson(`/api/course-manager/users/${userId}/status`, {
+await fetchJson(`/api/users/${userId}/status`, {
             method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',

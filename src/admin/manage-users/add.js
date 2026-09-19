@@ -65,7 +65,7 @@ function updateAssignmentFields() {
 
 async function loadOrganizationOptions() {
   try {
-    const response = await fetch('/api/admin/users/organization/options', {
+    const response = await fetch('/api/users/organization/options', {
       credentials: 'include',
       cache: 'no-store',
     });
@@ -171,7 +171,7 @@ async function createUser(event) {
     button.disabled = true;
     button.textContent = 'جارٍ إنشاء المستخدم...';
 
-    const response = await fetch('/api/admin/users', {
+    const response = await fetch('/api/users', {
       method: 'POST',
       credentials: 'include',
       headers: {

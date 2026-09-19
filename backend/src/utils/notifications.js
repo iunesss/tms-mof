@@ -1,3 +1,4 @@
+/** ينشئ الإشعار داخل transaction العملية الأصلية حتى لا يُرسل عن عملية فاشلة. */
 async function createNotification(
   connection,
   {
@@ -10,6 +11,11 @@ async function createNotification(
     relatedEntityId = null,
   }
 ) {
+  // التحقق من صحة المعطيات المدخلة
+  if (!connection?.query || recipientUserId == null || !notificationType || !title || !message) {
+    throw new TypeError('Notification requires a connection, recipient, type, title and message.');
+  }
+
   await connection.query(
     `
       INSERT INTO notifications (

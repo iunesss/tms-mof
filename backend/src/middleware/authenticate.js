@@ -6,13 +6,17 @@ const pool = require('../config/database');
  * لا يعتمد على أدوار التوكن القديمة بعد تغيير الصلاحيات.
  */
 async function authenticate(req, res, next) {
+  // الحصول على التوكن من الكوكيز
   const token = req.cookies?.tms_token;
   if (!token) return res.status(401).json({ message: 'يجب تسجيل الدخول أولًا.' });
+  // التأكد من وجود المفتاح السري
   if (!process.env.JWT_SECRET) return next(new Error('JWT_SECRET is not configured.'));
 
   let decoded;
   try {
+    // فحص التوكن باستخدام المفتاح السري، مع تحديد خوارزمية التشفير
     decoded = jwt.verify(token, process.env.JWT_SECRET, { algorithms: ['HS256'] });
+
     if (!decoded || !['string', 'number'].includes(typeof decoded.userId) ||
         !/^[1-9]\d*$/.test(String(decoded.userId))) {
       return res.status(401).json({ message: 'رمز الدخول غير صالح.' });
@@ -26,6 +30,7 @@ async function authenticate(req, res, next) {
   }
 
   try {
+    // يبحث بقاعده البيانات بنفس يوزر المستخدم المستخرج من التوكن، ويتأكد من أن الحساب نشط وغير محذوف، ثم يحمل أدوار المستخدم.
     const [rows] = await pool.execute(
       `SELECT u.id, u.username, r.code AS role_code
        FROM users u

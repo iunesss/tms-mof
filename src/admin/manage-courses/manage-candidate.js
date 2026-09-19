@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { notify } from '../../shared/notify.js';
 
 import {
   api,
@@ -113,10 +114,10 @@ function openReviewModal(kind, id, title) {
 async function reviewItem(kind, id, decision, reason = null) {
   const urls = {
     form:
-      `/api/admin/courses/${courseId}/candidates/${candidateId}/forms/${id}/review`,
+      `/api/courses/${courseId}/candidates/${candidateId}/forms/${id}/review`,
 
     profile:
-      `/api/admin/courses/${courseId}/candidates/${candidateId}/profile-documents/${id}/review`,
+      `/api/courses/${courseId}/candidates/${candidateId}/profile-documents/${id}/review`,
   };
 
   await api(urls[kind], {
@@ -218,7 +219,7 @@ function renderForms(forms = []) {
 
         await loadCandidate();
       } catch (error) {
-        alert(error.message);
+        notify(error.message);
       }
     });
   });
@@ -306,7 +307,7 @@ function renderProfileDocuments(documents = []) {
 
         await loadCandidate();
       } catch (error) {
-        alert(error.message);
+        notify(error.message);
       }
     });
   });
@@ -395,7 +396,7 @@ function renderStatusHistory(history = []) {
 
 async function loadCandidate() {
   const data = await api(
-    `/api/admin/courses/${courseId}/candidates/${candidateId}`
+    `/api/courses/${courseId}/candidates/${candidateId}`
   );
 
   const candidate = data.candidate || data;
@@ -434,7 +435,7 @@ async function loadCandidate() {
 
 async function updateCandidateStatus(status, reason = null) {
   await api(
-    `/api/admin/courses/${courseId}/candidates/${candidateId}/status`,
+    `/api/courses/${courseId}/candidates/${candidateId}/status`,
     {
       method: 'PATCH',
       headers: {
@@ -486,7 +487,7 @@ async function uploadCandidateAttachment(event) {
 
   try {
     const data = await api(
-      `/api/admin/courses/${courseId}/candidates/${candidateId}/attachments`,
+      `/api/courses/${courseId}/candidates/${candidateId}/attachments`,
       {
         method: 'POST',
         body: formData,
@@ -513,7 +514,7 @@ document.querySelector('#preliminaryAcceptButton').addEventListener(
   'click',
   () => {
     updateCandidateStatus('PRELIMINARILY_ACCEPTED')
-      .catch((error) => alert(error.message));
+      .catch((error) => notify(error.message));
   }
 );
 
@@ -521,7 +522,7 @@ document.querySelector('#confirmCandidateButton').addEventListener(
   'click',
   () => {
     updateCandidateStatus('CONFIRMED')
-      .catch((error) => alert(error.message));
+      .catch((error) => notify(error.message));
   }
 );
 

@@ -264,7 +264,7 @@ function setUnreadBadge(total) {
 
 
 async function loadDashboard() {
-  const data = await api('/api/employee/dashboard');
+  const data = await api('/api/dashboard');
 
   const summary = data.summary || {};
   const employee = data.employee || {};

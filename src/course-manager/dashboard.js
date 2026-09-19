@@ -164,7 +164,7 @@ function setSummary(summary) {
 }
 
 async function loadDashboard() {
-  const data = await api('/api/course-manager/dashboard');
+  const data = await api('/api/dashboard');
 
   setSummary(data.summary);
   renderRecentCourses(data.recentCourses || []);

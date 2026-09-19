@@ -8,6 +8,8 @@ const {
 } = require('../controllers/auth.controller');
 
 const { authenticate } = require('../middleware/authenticate');
+const { validate } = require('../middleware/validate');
+const { loginSchema } = require('../validators/auth.validator');
 
 const router = express.Router();
 //حد لعمليات تسجيل الدخول
@@ -21,7 +23,7 @@ const loginLimiter = rateLimit({
   },
 });
 
-router.post('/login', loginLimiter, login);
+router.post('/login', loginLimiter, validate(loginSchema), login);
 router.get('/me', authenticate, me);
 router.post('/logout',logout);
 

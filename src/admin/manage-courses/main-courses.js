@@ -96,7 +96,7 @@ async function loadCourses() {
   }
 
   try {
-    const data = await api(`/api/admin/courses?${params.toString()}`);
+    const data = await api(`/api/courses?${params.toString()}`);
     let courses = data.courses || [];
 
     // **الحل السحري هنا:** استبعاد المؤرشف والملغي تلقائياً من هذه الصفحة

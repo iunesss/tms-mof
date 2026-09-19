@@ -29,25 +29,35 @@ function createUpload(directory, acceptedTypes) {
         const destination = path.join(UPLOAD_ROOT, directory);
         fs.mkdir(destination, { recursive: true }, (error) => callback(error, destination));
       },
+      // تشفير اسم الملف
       filename(req, file, callback) {
         callback(null, `${Date.now()}-${crypto.randomUUID()}${path.extname(file.originalname).toLowerCase()}`);
       },
     }),
     fileFilter(req, file, callback) {
-      if (!acceptedTypes[file.mimetype]?.includes(path.extname(file.originalname).toLowerCase())) {
+      // يتاكد من نوع الملف مطابق او لا
+      if (file.fieldname === 'finalReport' && req.method !== 'PATCH') {
+        const error = new Error('التقرير النهائي يُرفع عند أرشفة دورة مكتملة فقط.');
+        error.status = 400;
+        return callback(error);
+      }
+      const allowed = file.fieldname === 'finalReport' ? documents : acceptedTypes;
+      if (!allowed[file.mimetype]?.includes(path.extname(file.originalname).toLowerCase())) {
         const error = new Error('نوع الملف أو امتداده غير مسموح لهذا الرفع.');
         error.status = 400;
         return callback(error);
       }
       callback(null, true);
     },
+    // يتاكد من الحجم
     limits: { fileSize: MAX_FILE_SIZE, files: 14, fields: 100, parts: 114 },
   });
 }
-
+// تعريف متغيرات للميدل ويرز لكل احتياج
 const courseUpload = createUpload('courses', { ...documents, ...word, ...excel }).fields([
   { name: 'agenda', maxCount: 1 }, { name: 'program', maxCount: 1 },
   { name: 'invitationTemplate', maxCount: 1 }, { name: 'attachment', maxCount: 1 },
+  { name: 'finalReport', maxCount: 1 },
   { name: 'courseFormTemplates', maxCount: 10 },
 ]);
 const profileUpload = createUpload('profiles', documents);

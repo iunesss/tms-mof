@@ -1,4 +1,5 @@
 import { protectPage } from '../shared/auth-guard.js';
+import { notify } from '../shared/notify.js';
 import {
   api,
   escapeHtml,
@@ -146,7 +147,7 @@ function renderNotifications(notifications) {
       if (!notification || notification.is_read) return;
 
       try {
-        await api(`/api/course-manager/notifications/${notificationId}/read`, {
+        await api(`/api/notifications/${notificationId}/read`, {
           method: 'PATCH',
         });
 
@@ -189,7 +190,7 @@ async function loadNotifications() {
   if (search) query.set('search', search);
 
   const data = await api(
-    `/api/course-manager/notifications?${query.toString()}`
+    `/api/notifications?${query.toString()}`
   );
 
   renderNotifications(data.notifications || []);
@@ -204,14 +205,15 @@ async function markAllAsRead() {
   button.textContent = 'جارٍ التحديث...';
 
   try {
-    await api('/api/course-manager/notifications/read-all', {
+    await api('/api/notifications/read-all', {
       method: 'PATCH',
     });
 
     state.page = 1;
     await loadNotifications();
+    notify('تم تحديد جميع الإشعارات كمقروءة.', 'success');
   } catch (error) {
-    alert(error.message || 'تعذر تحديث الإشعارات.');
+    notify(error.message || 'تعذر تحديث الإشعارات.');
   } finally {
     button.disabled = false;
     button.textContent = 'تحديد الكل كمقروء';

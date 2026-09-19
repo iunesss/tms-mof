@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { configureCourseLifecycle } from '../../shared/course-lifecycle.js';
 import { api, getQuery, escapeHtml } from './course-api.js';
 
 const courseId = getQuery('id');
@@ -118,7 +119,7 @@ async function loadDepartmentEmployees(row, departmentId) {
 
   try {
     const data = await api(
-      `/api/admin/courses/eligible-employees?departmentId=${encodeURIComponent(departmentId)}`
+      `/api/courses/eligible-employees?departmentId=${encodeURIComponent(departmentId)}`
     );
 
     const employees = data.employees || [];
@@ -544,8 +545,8 @@ async function initialize() {
 
   try {
     const [courseData, optionsData] = await Promise.all([
-      api(`/api/admin/courses/${courseId}`),
-      api('/api/admin/courses/organization/options'),
+      api(`/api/courses/${courseId}`),
+      api('/api/courses/organization/options'),
     ]);
 
     currentCourse = courseData.course || courseData;
@@ -622,6 +623,7 @@ document.querySelector('#city').value =
     }
 
     updateWorkflowFields();
+    configureCourseLifecycle(currentCourse, form);
   } catch (error) {
     showMessage(error.message);
   }
@@ -649,6 +651,9 @@ form.addEventListener('submit', async (event) => {
 
     const selectedCourseType = courseTypeInput.value;
     const rawStatus = document.querySelector('#courseStatus').value;
+    if (rawStatus === 'ARCHIVED' && !document.querySelector('#finalReportFile').files[0]) {
+      throw new Error('ارفع التقرير النهائي قبل أرشفة الدورة.');
+    }
 
     const status =
       selectedCourseType === 'TRAINING' && rawStatus === 'ACTIVE'
@@ -693,6 +698,8 @@ if (new Date(endDate) < new Date(startDate)) {
     const formData = new FormData();
 
     appendCourseFields(formData, courseData);
+    const finalReport = document.querySelector('#finalReportFile').files[0];
+    if (finalReport) formData.append('finalReport', finalReport);
 
     formData.append('allocations', JSON.stringify(allocations));
     formData.append(
@@ -729,7 +736,7 @@ templateFiles.forEach((file) => {
     submitButton.disabled = true;
     submitButton.textContent = 'جارٍ الحفظ...';
 
-    await api(`/api/admin/courses/${courseId}`, {
+    await api(`/api/courses/${courseId}`, {
       method: 'PATCH',
       body: formData,
     });
@@ -737,7 +744,9 @@ templateFiles.forEach((file) => {
     showMessage('تم حفظ تعديلات الدورة بنجاح.', 'success');
 
     setTimeout(() => {
-      window.location.href = `./manage-course.html?id=${courseId}`;
+      window.location.href = ['COMPLETED', 'ARCHIVED', 'CANCELLED'].includes(rawStatus)
+        ? '../reports/archive.html'
+        : `./manage-course.html?id=${courseId}`;
     }, 700);
   } catch (error) {
     showMessage(error.message);

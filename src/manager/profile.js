@@ -210,7 +210,7 @@ function closeModal() {
 
 async function loadNotificationsCount() {
   try {
-    const data = await request('/api/manager/notifications?limit=1');
+    const data = await request('/api/notifications?limit=1');
 
     if (!data) return;
 
@@ -229,7 +229,7 @@ async function loadNotificationsCount() {
 }
 
 async function loadProfile() {
-  const data = await request('/api/manager/profile');
+  const data = await request('/api/profile');
 
   if (!data) return;
 
@@ -262,7 +262,7 @@ async function saveProfile(event) {
     saveButton.disabled = true;
     saveButton.textContent = 'جارٍ حفظ التعديلات...';
 
-    const data = await request('/api/manager/profile', {
+    const data = await request('/api/profile', {
       method: 'PATCH',
       body: formData,
     });

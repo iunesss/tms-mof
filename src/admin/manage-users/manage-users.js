@@ -171,7 +171,7 @@ async function loadUsers() {
   if (role) query.set('role', role);
   if (status) query.set('status', status);
 
-  const response = await fetch(`/api/admin/users?${query.toString()}`, {
+  const response = await fetch(`/api/users?${query.toString()}`, {
     credentials: 'include',
     cache: 'no-store',
   });

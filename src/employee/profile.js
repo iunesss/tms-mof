@@ -159,7 +159,7 @@ function closeModal() {
 }
 
 async function loadProfile() {
-  const data = await api('/api/employee/profile');
+  const data = await api('/api/profile');
   if (data) renderProfile(data.profile || data);
 }
 
@@ -195,7 +195,7 @@ async function saveProfile(event) {
     button.disabled = true;
     button.textContent = 'جارٍ الحفظ...';
 
-    const data = await api('/api/employee/profile', {
+    const data = await api('/api/profile', {
       method: 'PATCH',
       body: formData,
     });

@@ -140,7 +140,7 @@ async function loadDepartmentEmployees(row, departmentId) {
 
   try {
     const data = await api(
-      `/api/admin/courses/eligible-employees?departmentId=${encodeURIComponent(departmentId)}`
+      `/api/courses/eligible-employees?departmentId=${encodeURIComponent(departmentId)}`
     );
 
     const employees = data.employees || [];
@@ -279,7 +279,7 @@ function addAllocation() {
 }
 
 async function loadDepartments() {
-  const data = await api('/api/admin/courses/organization/options');
+  const data = await api('/api/courses/organization/options');
   departments = data.departments || [];
 
   if (!departments.length) {
@@ -471,7 +471,7 @@ templateFiles.forEach((file) => {
     submitButton.disabled = true;
     submitButton.textContent = 'جارٍ الحفظ...';
 
-    const data = await api('/api/admin/courses', {
+    const data = await api('/api/courses', {
       method: 'POST',
       body: formData,
     });

@@ -6,9 +6,13 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "check:frontend": "node scripts/check-frontend.mjs",
+    "lint": "eslint src backend/src backend/test backend/scripts scripts vite.config.js"
   },
   "devDependencies": {
+    "eslint": "^10.11.0",
+    "globals": "^17.12.0",
     "vite": "^8.2.2"
   },
   "dependencies": {
