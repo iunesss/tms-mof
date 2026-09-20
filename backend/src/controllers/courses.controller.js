@@ -12,6 +12,7 @@ const services = {
   DEPARTMENT_MANAGER: { ...manager, submitForm: employee.submitForm },
   EMPLOYEE: employee,
 };
+// نعرف مصفوفه لكل العمليات
 const operations = [
   'getOrganizationOptions', 'getEligibleEmployees', 'getArchive', 'listCourses',
   'createCourse', 'getCourse', 'updateCourse', 'listCourseCandidates',
@@ -21,6 +22,7 @@ const operations = [
   'uploadCandidateAttachment',
 ];
 const controller = {};
+// عند وصول الطلب يبحث في الرولز الخاصه بالمستخدم وهل له صلاحيه التنفيذ او لا
 for (const operation of operations) {
   controller[operation] = (req, res, next) => {
     const handler = services[req.resourceRole]?.[operation];
@@ -29,7 +31,7 @@ for (const operation of operations) {
   };
 }
 
-// يستخدمها الـrouter لمنع تشغيل multer/validator لعملية غير متاحة لهذا الدور.
+// ينشئكائن يتسعمله السكوب راوتر حتى للا يبدا بتشغيل الميدل ويرز وتثقل على السيرفر دام انه رول المستخدم ما عنده صلاحيه للعمليه
 controller.allowedOperations = Object.fromEntries(
   Object.entries(services).map(([role, service]) => [role, Object.keys(service)])
 );
