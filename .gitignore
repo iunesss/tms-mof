@@ -12,6 +12,19 @@ dist
 dist-ssr
 *.local
 
+# Local Codex workspace configuration
+.codex/
+
+# Environment secrets (commit only the documented template)
+.env
+.env.*
+!.env.example
+!backend/.env.example
+
+# Runtime uploads belong to storage, not source control
+backend/public/uploads/*
+!backend/public/uploads/.gitkeep
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
