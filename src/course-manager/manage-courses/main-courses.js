@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
 
 import {
   api,
@@ -106,10 +107,12 @@ async function loadCourses() {
 
   try {
     const data = await api(`/api/courses?${params.toString()}`);
-    const courses = data.courses || [];
+    const courses = (data.courses || []).filter(
+      (course) => course.status !== 'ARCHIVED' && course.status !== 'CANCELLED'
+    );
 
     countText.textContent =
-      `إجمالي الدورات: ${data.total ?? courses.length}`;
+      `إجمالي الدورات: ${courses.length}`;
 
     renderCourses(courses);
   } catch (error) {
@@ -150,6 +153,7 @@ form.addEventListener('submit', (event) => {
   event.preventDefault();
   loadCourses();
 });
+bindLiveFilters('#coursesFiltersForm', loadCourses);
 
 resetButton.addEventListener('click', () => {
   form.reset();

@@ -69,47 +69,22 @@ function fillEditForm(profile) {
 }
 
 function renderDocuments(documents = []) {
-  const container = document.querySelector('#profileDocumentsList');
   const passportPreview = document.querySelector('#passportPreview');
-
   const passport = documents.find(
     (document) => document.document_type === 'PASSPORT'
   );
-
-  passportPreview.innerHTML = passport
-    ? `
-      <a href="${passport.file_url}" target="_blank" rel="noopener" class="text-brand-darkGold underline">
-        عرض جواز السفر
-      </a>
-    `
-    : 'لا يوجد جواز مرفوع.';
-
-  if (!documents.length) {
-    container.innerHTML = `
-      <div class="rounded-xl border border-dashed border-slate-300 px-5 py-8 text-center text-xs text-slate-400">
-        لا توجد مستندات شخصية مرفوعة حتى الآن.
-      </div>
-    `;
+  passportPreview.replaceChildren();
+  if (!passport?.file_url) {
+    passportPreview.textContent = 'لا يوجد جواز مرفوع.';
     return;
   }
-
-  container.innerHTML = `
-    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      ${documents.map((document) => `
-        <a href="${document.file_url}" target="_blank" rel="noopener" class="rounded-xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-gold">
-          <p class="text-xs font-bold text-slate-800">
-            ${document.title || document.label || 'مستند شخصي'}
-          </p>
-          <p class="mt-1 text-[11px] text-slate-500">
-            ${document.original_name || 'فتح المستند'}
-          </p>
-          <p class="mt-3 text-[10px] font-bold text-brand-darkGold">
-            ${document.status || 'PENDING'} ← فتح
-          </p>
-        </a>
-      `).join('')}
-    </div>
-  `;
+  const link = document.createElement('a');
+  link.href = passport.file_url;
+  link.target = '_blank';
+  link.rel = 'noopener';
+  link.className = 'text-brand-darkGold underline transition hover:text-brand-gold';
+  link.textContent = 'عرض جواز السفر';
+  passportPreview.append(link);
 }
 
 function renderProfile(profile) {
@@ -229,13 +204,8 @@ async function initialize() {
 
   document.querySelector('#logoutButton').addEventListener('click', logout);
 
-  [
-    '#openEditProfileButton',
-    '#openEditProfileButtonSecondary',
-    '#openEditProfileButtonDocuments',
-  ].forEach((selector) => {
-    document.querySelector(selector).addEventListener('click', openModal);
-  });
+  document.querySelector('#openEditProfileButtonSecondary')
+    .addEventListener('click', openModal);
 
   document.querySelector('#closeEditProfileButton')
     .addEventListener('click', closeModal);

@@ -12,7 +12,19 @@ const pageInputs = Object.fromEntries(
 );
 
 export default defineConfig({
-  plugins: [tailwindcss()],
+  plugins: [
+    tailwindcss(),
+    {
+      name: 'global-page-scrollbars',
+      transformIndexHtml() {
+        return [{
+          tag: 'link',
+          attrs: { rel: 'stylesheet', href: '/scrollbars.css' },
+          injectTo: 'head',
+        }];
+      },
+    },
+  ],
 
   server: {
     open: 'src/login/index.html',

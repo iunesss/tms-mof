@@ -1,4 +1,5 @@
 import { protectPage } from '../shared/auth-guard.js';
+import { courseStatusText } from '../shared/status-labels.js';
 import {
   api,
   escapeHtml,
@@ -19,21 +20,6 @@ function courseTypeText(type) {
   return type === 'MISSION'
     ? 'مهمة / بعثة'
     : 'دورة تدريبية';
-}
-
-function courseStatusText(status) {
-  const statuses = {
-    DRAFT: 'مسودة',
-    OPEN_FOR_NOMINATION: 'مفتوحة للترشيح',
-    NOMINATION_CLOSED: 'أغلق الترشيح',
-    CANDIDATE_PROCESSING: 'معالجة المرشحين',
-    ACTIVE: 'نشطة',
-    COMPLETED: 'مكتملة',
-    ARCHIVED: 'مؤرشفة',
-    CANCELLED: 'ملغاة',
-  };
-
-  return statuses[status] || status || '—';
 }
 
 function notificationColor(notification) {
@@ -58,31 +44,31 @@ function renderRecentCourses(courses) {
     return;
   }
 
-  body.innerHTML = courses.map((course) => `
+  body.innerHTML = courses.slice(0, 3).map((course) => `
     <tr class="hover:bg-slate-50">
-      <td class="py-4 font-semibold text-slate-700">
+      <td class="py-3 font-semibold text-slate-700">
         ${escapeHtml(course.course_no)}
       </td>
 
-      <td class="py-4 font-bold text-slate-900">
+      <td class="py-3 font-bold text-slate-900">
         ${escapeHtml(course.title)}
       </td>
 
-      <td class="py-4 text-slate-600">
+      <td class="py-3 text-slate-600">
         ${escapeHtml(courseTypeText(course.course_type))}
       </td>
 
-      <td class="py-4">
+      <td class="py-3">
         <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
           ${escapeHtml(courseStatusText(course.status))}
         </span>
       </td>
 
-      <td class="py-4 text-slate-500">
+      <td class="py-3 text-slate-500">
         ${formatDate(course.start_date)}
       </td>
 
-      <td class="py-4">
+      <td class="py-3">
         <a
           href="./manage-courses/manage-course.html?id=${course.id}"
           class="rounded-lg border border-brand-gold px-3 py-1.5 text-[11px] font-bold text-brand-darkGold transition hover:bg-brand-lightGold"
@@ -106,10 +92,10 @@ function renderNotifications(notifications) {
     return;
   }
 
-  container.innerHTML = notifications.map((notification) => `
+  container.innerHTML = notifications.slice(0, 2).map((notification) => `
     <a
       href="./notifications.html"
-      class="block rounded-lg border px-3 py-3 transition hover:border-brand-gold ${notificationColor(notification)}"
+      class="block rounded-lg border px-3 py-2.5 transition hover:border-brand-gold ${notificationColor(notification)}"
     >
       <div class="flex items-start justify-between gap-3">
         <p class="text-xs font-bold text-slate-800">
@@ -125,11 +111,11 @@ function renderNotifications(notifications) {
         }
       </div>
 
-      <p class="mt-1.5 line-clamp-2 text-[11px] leading-5 text-slate-500">
+      <p class="mt-1 line-clamp-1 text-[11px] leading-5 text-slate-500">
         ${escapeHtml(notification.message)}
       </p>
 
-      <p class="mt-2 text-[10px] text-slate-400">
+      <p class="mt-1 text-[10px] text-slate-400">
         ${formatDate(notification.created_at)}
       </p>
     </a>

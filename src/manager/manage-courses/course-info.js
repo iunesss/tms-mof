@@ -1,11 +1,23 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { renderFinalReport } from '../../shared/final-report.js';
+import {
+  courseStatusText,
+  nominationStatusText,
+  candidateStatusText,
+  formStatusText,
+  attachmentTypeText,
+} from '../../shared/status-labels.js';
 import { notify } from '../../shared/notify.js';
 
 const courseId = new URLSearchParams(window.location.search).get('id');
+const openedFromArchive =
+  new URLSearchParams(window.location.search).get('from') === 'archive';
 
 let availableEmployees = [];
 let currentCourse = null;
 let currentUserId = null;
+let participantsOnly = false;
+let remainingNominationSlots = 0;
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -50,23 +62,6 @@ function setText(selector, value) {
   }
 }
 
-function nominationStatusText(status) {
-  const statuses = {
-    PENDING: 'بانتظار الوكيل',
-    PENDING_AGENT: 'بانتظار الوكيل',
-    AGENT_APPROVED: 'اعتمده الوكيل',
-    AGENT_REJECTED: 'رفضه الوكيل',
-    SELECTED: 'تم الاختيار',
-    DOCUMENTS_PENDING: 'بانتظار المستندات',
-    PRELIMINARILY_ACCEPTED: 'مقبول مبدئيًا',
-    CONFIRMED: 'مؤكد',
-    REJECTED: 'مرفوض',
-    WITHDRAWN: 'تم السحب',
-  };
-
-  return statuses[status] || status || '—';
-}
-
 function showEditorMessage(message, type = 'error') {
   const element = document.querySelector('#nominationEditorMessage');
 
@@ -92,6 +87,10 @@ function updateSelectionState() {
 
   document.querySelector('#submitNominationsButton').disabled =
     selected.length === 0;
+
+  document.querySelectorAll('.employee-checkbox:not(:checked)').forEach((checkbox) => {
+    checkbox.disabled = selected.length >= remainingNominationSlots;
+  });
   const selectAll = document.querySelector('#selectAllEmployees');
 
   selectAll.checked =
@@ -166,15 +165,13 @@ function renderNominations(nominations) {
     '#departmentNominationsTableBody'
   );
 
-  const isMission = currentCourse?.course_type === 'MISSION';
-
   document.querySelector('#departmentCandidatesText').textContent =
     nominations.length
-      ? isMission
-        ? `إجمالي موظفي القسم في المهمة: ${nominations.length}`
+      ? participantsOnly
+        ? `إجمالي المشاركين من القسم: ${nominations.length}`
         : `إجمالي ترشيحات القسم: ${nominations.length}`
-      : isMission
-        ? 'لا يوجد موظفون من القسم في هذه المهمة.'
+      : participantsOnly
+        ? 'لا يوجد موظفون مشاركون من القسم في هذه الدورة.'
         : 'لا توجد ترشيحات للقسم حتى الآن.';
 
   if (!nominations.length) {
@@ -182,8 +179,8 @@ function renderNominations(nominations) {
       <tr>
         <td colspan="5" class="px-5 py-10 text-center text-xs text-slate-400">
           ${
-            isMission
-              ? 'لا يوجد موظفون من القسم ضمن هذه المهمة.'
+            participantsOnly
+              ? 'لا يوجد موظفون مشاركون من القسم في هذه الدورة.'
               : 'لا توجد ترشيحات للقسم.'
           }
         </td>
@@ -211,14 +208,16 @@ function renderNominations(nominations) {
 
           <td class="px-5 py-3">
             <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
-              ${nominationStatusText(nomination.status)}
+              ${participantsOnly
+                ? candidateStatusText(nomination.status)
+                : nominationStatusText(nomination.status)}
             </span>
           </td>
 
           <td class="px-5 py-3 text-slate-500">
             ${
-              currentCourse?.course_type === 'MISSION'
-                ? 'تم اختياره مباشرةً للمهمة'
+              participantsOnly
+                ? 'شارك ضمن موظفي القسم'
                 : escapeHtml(nomination.reason || '—')
             }
           </td>
@@ -247,7 +246,7 @@ function renderAttachments(attachments) {
           rel="noopener"
           class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-brand-darkGold"
         >
-          ${escapeHtml(attachment.attachment_type)}:
+          ${escapeHtml(attachmentTypeText(attachment.attachment_type))}:
           ${escapeHtml(attachment.original_name)}
         </a>
       `
@@ -255,7 +254,7 @@ function renderAttachments(attachments) {
     .join('');
 }
 
-function renderSelfCourseForms(forms) {
+function renderSelfCourseForms(forms, canUpload) {
   const section = document.querySelector('#selfCandidateSection');
   const container = document.querySelector('#selfCourseFormsList');
 
@@ -288,6 +287,11 @@ function renderSelfCourseForms(forms) {
                     : 'استمارة اختيارية'
                 }
               </p>
+              <p class="mt-1 text-[11px] text-slate-500">
+                الحالة: ${form.submission_status
+                  ? formStatusText(form.submission_status)
+                  : 'لم تُرفع بعد'}
+              </p>
             </div>
 
             <a
@@ -300,7 +304,14 @@ function renderSelfCourseForms(forms) {
             </a>
           </div>
 
-          <div class="mt-3 flex flex-col gap-2 sm:flex-row">
+          ${form.submitted_file_url ? `
+            <a href="${escapeHtml(form.submitted_file_url)}" target="_blank" rel="noopener"
+               class="mt-3 inline-block text-[11px] font-semibold text-brand-darkGold underline">
+              عرض نسختي المرفوعة
+            </a>
+          ` : ''}
+
+          ${canUpload ? `<div class="mt-3 flex flex-col gap-2 sm:flex-row">
             <input
               data-form-id="${form.id}"
               type="file"
@@ -314,19 +325,42 @@ function renderSelfCourseForms(forms) {
             >
               رفع النسخة المعبأة
             </button>
-          </div>
+          </div>` : ''}
         </article>
       `
     )
     .join('');
 }
 
+function renderSelfCandidateAttachments(attachments = []) {
+  const section = document.querySelector('#selfCandidateAttachmentsSection');
+  const container = document.querySelector('#selfCandidateAttachmentsList');
+
+  section.classList.remove('hidden');
+  if (!attachments.length) {
+    container.textContent = 'لم تُرسل لك تذكرة أو تأشيرة أو مستندات خاصة حتى الآن.';
+    return;
+  }
+
+  container.innerHTML = attachments.map((attachment) => `
+    <a href="${escapeHtml(attachment.file_url)}" target="_blank" rel="noopener"
+       class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 font-semibold text-brand-darkGold">
+      ${escapeHtml(attachmentTypeText(attachment.attachment_type))}: ${escapeHtml(attachment.original_name)}
+    </a>
+  `).join('');
+}
+
 function fillPage(data) {
   const course = data.course || {};
-  const department = data.department || {};
   const allocation = data.departmentAllocation || {};
 
   currentCourse = course;
+  participantsOnly = data.participants_only === true;
+  remainingNominationSlots = Math.max(
+    Number(allocation.nomination_limit || 0) -
+      Number(allocation.nominations_count || 0),
+    0
+  );
 
   const isReadOnlyMission =
     data.read_only === true ||
@@ -337,8 +371,12 @@ function fillPage(data) {
   setText('#providerName', course.provider || '—');
   setText('#courseLocation', course.location || '—');
   setText('#courseDescription', course.description || 'لا يوجد وصف.');
-  setText('#departmentName', department.name);
-  setText('#sectorName', department.sector_name);
+  const participation = data.selfParticipation;
+  document.querySelector('#selfParticipationStatus').textContent = participation
+    ? participation.type === 'CANDIDATE'
+      ? candidateStatusText(participation.status)
+      : nominationStatusText(participation.status)
+    : 'غير مرشح في هذه الدورة';
 
   setText(
     '#departmentNominationLimit',
@@ -370,7 +408,7 @@ function fillPage(data) {
       : 'دورة تدريبية';
 
   document.querySelector('#courseStatusBadge').textContent =
-    course.status || '—';
+    courseStatusText(course.status);
 
   availableEmployees = isReadOnlyMission
     ? []
@@ -380,7 +418,7 @@ function fillPage(data) {
 
   /*
     المهمة: للعرض فقط.
-    التدريب بعد الإرسال: لا يمكن تعديله.
+    التدريب: يبقى مفتوحًا ما دام هناك مقعد ترشيح متبقٍ والموعد لم ينتهِ.
   */
   if (isReadOnlyMission || data.submission_locked) {
     editor.classList.add('hidden');
@@ -390,20 +428,35 @@ function fillPage(data) {
   }
 
   renderNominations(data.nominations || []);
+  document.querySelector('#departmentCandidatesTitle').textContent =
+    participantsOnly ? 'الموظفون المشاركون من القسم' : 'مرشحو القسم';
   renderAttachments(data.attachments || []);
+  renderFinalReport(data.final_report, course.status);
 
   const selfCandidateSection = document.querySelector(
     '#selfCandidateSection'
   );
 
-  /*
-    الاستمارات تظهر فقط في التدريب، إذا رشح المدير نفسه.
-    المهمة لا تعرض أي رفع أو استمارات شخصية من هذه الصفحة.
-  */
-  if (!isReadOnlyMission && data.selfCandidate) {
-    renderSelfCourseForms(data.selfCourseForms || []);
+  if (data.selfCandidate) {
+    const closedCourseStatuses = ['COMPLETED', 'ARCHIVED', 'CANCELLED'];
+    const acceptedCandidateStatuses = [
+      'PRELIMINARILY_ACCEPTED',
+      'CONFIRMED',
+      'PARTICIPATING',
+      'COMPLETED',
+    ];
+    const canUploadForms =
+      !closedCourseStatuses.includes(course.status) &&
+      !acceptedCandidateStatuses.includes(data.selfParticipation?.status);
+
+    document.querySelector('#selfFormsDescription').textContent = canUploadForms
+      ? 'حمّل الاستمارة، عبئها، ثم ارفع النسخة المعبأة.'
+      : 'يمكنك تحميل الاستمارة وعرض النسخة التي رفعتها سابقًا.';
+    renderSelfCourseForms(data.selfCourseForms || [], canUploadForms);
+    renderSelfCandidateAttachments(data.selfCandidateAttachments || []);
   } else {
     selfCandidateSection.classList.add('hidden');
+    document.querySelector('#selfCandidateAttachmentsSection').classList.add('hidden');
   }
 }
 
@@ -473,6 +526,13 @@ async function initialize() {
 
   currentUserId = user.id || user.userId || user.user_id;
 
+  if (openedFromArchive) {
+    document.querySelector('#backToCoursesLogo').href = './archive.html';
+    const backButton = document.querySelector('#backToCoursesButton');
+    backButton.href = './archive.html';
+    backButton.textContent = 'العودة إلى السجل';
+  }
+
   if (!courseId) {
     window.location.replace('./main-courses.html');
     return;
@@ -483,8 +543,9 @@ async function initialize() {
     (event) => {
       document
         .querySelectorAll('.employee-checkbox')
-        .forEach((checkbox) => {
-          checkbox.checked = event.target.checked;
+        .forEach((checkbox, index) => {
+          checkbox.checked =
+            event.target.checked && index < remainingNominationSlots;
         });
 
       updateSelectionState();

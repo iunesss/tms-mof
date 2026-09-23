@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
 
 import {
   api,
@@ -21,7 +22,7 @@ function showMessage(message) {
 
   body.innerHTML = `
     <tr>
-      <td colspan="8" class="px-5 py-10 text-center text-xs text-rose-600">
+      <td colspan="6" class="px-5 py-10 text-center text-xs text-rose-600">
         ${escapeHtml(message)}
       </td>
     </tr>
@@ -73,7 +74,7 @@ function renderCourses(courses) {
   if (!courses.length) {
     body.innerHTML = `
       <tr>
-        <td colspan="8" class="px-5 py-10 text-center text-xs text-slate-400">
+        <td colspan="6" class="px-5 py-10 text-center text-xs text-slate-400">
           لا توجد دورات أو مهام مطابقة للبحث.
         </td>
       </tr>
@@ -97,20 +98,10 @@ function renderCourses(courses) {
             ${escapeHtml(courseTypeText(course.course_type))}
           </td>
 
-          <td class="px-5 py-3">
-            ${escapeHtml(course.provider || '—')}
-          </td>
-
           <td class="px-5 py-3 text-slate-500">
             ${formatDate(course.start_date)}
             <span class="mx-1">—</span>
             ${formatDate(course.end_date)}
-          </td>
-
-          <td class="px-5 py-3">
-            ${Number(course.confirmed_count || 0)}
-            /
-            ${Number(course.candidates_count || 0)}
           </td>
 
           <td class="px-5 py-3">
@@ -126,6 +117,7 @@ href="./manage-course.html?id=${encodeURIComponent(course.id)}"
             >
               عرض التفاصيل
             </a>
+            ${course.final_report?.file_url ? `<a href="${escapeHtml(course.final_report.file_url)}" target="_blank" rel="noopener" class="mr-2 inline-block rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50">عرض التقرير</a>` : '<span class="mr-2 inline-block rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-400">لا يوجد تقرير</span>'}
           </td>
         </tr>
       `
@@ -182,7 +174,7 @@ function clearFilters() {
   loadArchive();
 }
 
-document.querySelector('#searchArchiveButton').addEventListener('click', () => {
+bindLiveFilters('main', () => {
   state.page = 1;
   loadArchive();
 });

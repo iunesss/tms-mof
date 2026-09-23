@@ -51,7 +51,7 @@ async function fetchUserById(connection, userId) {
         MAX(manager_department.id) AS department_id,
         MAX(manager_department.name) AS department_name,
 
-        MAX(employee_manager.manager_user_id) AS department_manager_user_id,
+        MAX(employee_manager.manager_user_id) AS manager_user_id,
         MAX(employee_manager_profile.full_name) AS department_manager_name
 
       FROM users u

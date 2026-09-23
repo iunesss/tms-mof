@@ -82,8 +82,8 @@
     </div>
   </nav>
 
-  <main class="mx-auto max-w-[92%] space-y-5 px-4 py-6 sm:px-6">
-    <section class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white px-5 py-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+  <main class="mx-auto max-w-[92%] space-y-3 px-4 py-3 sm:px-6">
+    <section class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
       <div>
         <p class="text-[11px] text-slate-500">الدورات والمهام</p>
         <h2 class="mt-0.5 text-lg font-bold text-slate-900">دوراتي الحالية</h2>
@@ -99,15 +99,39 @@
 
     <p id="pageMessage" class="hidden rounded-xl border px-4 py-3 text-xs font-semibold" role="alert"></p>
 
-    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="mb-5 flex items-center justify-between border-b border-slate-200 pb-4">
+    <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+      <form id="coursesFiltersForm" class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+        <input id="courseSearchInput" type="search" placeholder="ابحث باسم الدورة أو رقمها" class="rounded-lg border border-slate-300 px-3.5 py-2.5 text-xs outline-none focus:border-brand-gold xl:col-span-2" />
+
+        <select id="courseTypeFilter" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-brand-gold">
+          <option value="">كل الأنواع</option>
+          <option value="TRAINING">دورة تدريبية</option>
+          <option value="MISSION">مهمة / بعثة</option>
+        </select>
+
+        <select id="courseStatusFilter" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-brand-gold">
+          <option value="">كل الحالات</option>
+          <option value="OPEN_FOR_NOMINATION">مفتوحة للترشيح</option>
+          <option value="NOMINATION_CLOSED">أُغلق الترشيح</option>
+          <option value="CANDIDATE_PROCESSING">قيد معالجة المرشحين</option>
+          <option value="ACTIVE">نشطة</option>
+        </select>
+
+        <div class="flex gap-2.5 xl:col-span-4">
+          <button id="resetCoursesFiltersButton" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600">إعادة ضبط</button>
+        </div>
+      </form>
+    </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+      <div class="mb-3 flex items-center justify-between border-b border-slate-200 pb-3">
         <div>
           <h3 class="text-sm font-bold text-slate-900">الدورات المتاحة لك</h3>
           <p id="coursesCountText" class="mt-1 text-xs text-slate-500">جارٍ تحميل الدورات...</p>
         </div>
       </div>
 
-      <div id="coursesGrid" class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      <div id="coursesGrid" class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
         <div class="rounded-xl border border-dashed border-slate-300 px-5 py-12 text-center text-xs text-slate-400 md:col-span-2 xl:col-span-3">
           جارٍ تحميل الدورات...
         </div>

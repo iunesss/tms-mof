@@ -202,12 +202,12 @@
        MAIN
   ========================== -->
 
-  <main class="mx-auto max-w-[92%] space-y-5 px-4 py-6 sm:px-6">
+  <main class="mx-auto max-w-[92%] space-y-3 px-4 py-3 sm:px-6">
 
 
     <!-- Welcome -->
     <section
-      class="flex flex-col gap-4 rounded-xl border border-slate-200 bg-white px-5 py-4 shadow-sm lg:flex-row lg:items-center lg:justify-between"
+      class="flex flex-col gap-3 rounded-xl border border-slate-200 bg-white px-5 py-3 shadow-sm lg:flex-row lg:items-center lg:justify-between"
     >
 
       <div>
@@ -247,12 +247,7 @@
           جارٍ تحميل القسم...
         </p>
 
-        <p
-          id="jobTitle"
-          class="mt-1 text-[11px] text-slate-500"
-        >
-          —
-        </p>
+        <p id="jobTitle" class="mt-1 hidden text-[11px] text-slate-500"></p>
 
       </div>
 
@@ -263,12 +258,12 @@
          SUMMARY CARDS
     ========================== -->
 
-    <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+    <section class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
 
 
-      <!-- Nominated Courses -->
+      <!-- الدورة الحالية -->
       <article
-        class="rounded-xl border-t-4 border-blue-500 bg-white p-4 shadow-sm"
+        class="rounded-xl border-t-4 border-blue-500 bg-white p-3 shadow-sm"
       >
 
         <div class="flex items-start justify-between">
@@ -276,11 +271,11 @@
           <div>
 
             <p class="text-xs font-medium text-slate-500">
-              دوراتي
+              دورتي الحالية
             </p>
 
             <p
-              id="nominatedCoursesCount"
+              id="currentCourseCount"
               class="mt-2 text-2xl font-bold text-slate-900"
             >
               —
@@ -294,19 +289,12 @@
 
         </div>
 
-        <a
-          href="./main-courses.html"
-          class="mt-3 inline-block text-[11px] font-semibold text-brand-darkGold hover:underline"
-        >
-          عرض دوراتي
-        </a>
-
       </article>
 
 
-      <!-- Active Courses -->
+      <!-- سجل الدورات السابقة -->
       <article
-        class="rounded-xl border-t-4 border-brand-gold bg-white p-4 shadow-sm"
+        class="rounded-xl border-t-4 border-brand-gold bg-white p-3 shadow-sm"
       >
 
         <div class="flex items-start justify-between">
@@ -314,11 +302,11 @@
           <div>
 
             <p class="text-xs font-medium text-slate-500">
-              الدورات الحالية
+              دورات سابقة
             </p>
 
             <p
-              id="activeCoursesCount"
+              id="previousCoursesCount"
               class="mt-2 text-2xl font-bold text-slate-900"
             >
               —
@@ -327,21 +315,17 @@
           </div>
 
           <div class="rounded-lg bg-brand-lightGold p-2.5 text-lg text-brand-darkGold">
-            🎓
+            🗂️
           </div>
 
         </div>
-
-        <p class="mt-3 text-[11px] text-slate-500">
-          الدورات التي أنت مشارك فيها أو بدأت إجراءاتها.
-        </p>
 
       </article>
 
 
       <!-- Required Forms -->
       <article
-        class="rounded-xl border-t-4 border-violet-500 bg-white p-4 shadow-sm"
+        class="rounded-xl border-t-4 border-violet-500 bg-white p-3 shadow-sm"
       >
 
         <div class="flex items-start justify-between">
@@ -367,16 +351,12 @@
 
         </div>
 
-        <p class="mt-3 text-[11px] text-slate-500">
-          استمارات تحتاج إلى تعبئتها أو رفعها.
-        </p>
-
       </article>
 
 
       <!-- Notifications -->
       <article
-        class="rounded-xl border-t-4 border-rose-500 bg-white p-4 shadow-sm"
+        class="rounded-xl border-t-4 border-rose-500 bg-white p-3 shadow-sm"
       >
 
         <div class="flex items-start justify-between">
@@ -402,236 +382,37 @@
 
         </div>
 
-        <a
-          href="./notifications.html"
-          class="mt-3 inline-block text-[11px] font-semibold text-rose-600 hover:underline"
-        >
-          عرض الإشعارات
-        </a>
-
       </article>
 
     </section>
 
 
-    <!-- =========================
-         COURSES + QUICK ACTIONS
-    ========================== -->
-
-    <section class="grid gap-5 xl:grid-cols-12">
-
-
-      <!-- My Courses -->
-      <article
-        class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm xl:col-span-8"
-      >
-
-        <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-
-          <div>
-
-            <h3 class="text-sm font-bold text-slate-900">
-              الدورات المرشح لها
-            </h3>
-
-            <p class="mt-1 text-[11px] text-slate-500">
-              الدورات التي تم ترشيحك لها ويمكنك متابعة تفاصيلها وإجراءاتها.
-            </p>
-
-          </div>
-
-          <a
-            href="./main-courses.html"
-            class="rounded-lg bg-slate-100 px-3 py-1.5 text-[11px] font-semibold text-slate-700 transition hover:bg-brand-lightGold"
-          >
-            عرض كل الدورات ←
-          </a>
-
-        </div>
-
-
-        <div class="overflow-x-auto">
-
-          <table class="w-full min-w-[720px] text-right text-xs">
-
-            <thead class="border-b border-slate-200 bg-slate-50 text-slate-500">
-
-              <tr>
-
-                <th class="px-5 py-3 font-medium">
-                  الدورة
-                </th>
-
-                <th class="px-5 py-3 font-medium">
-                  النوع
-                </th>
-
-                <th class="px-5 py-3 font-medium">
-                  الحالة
-                </th>
-
-                <th class="px-5 py-3 font-medium">
-                  الإجراء
-                </th>
-
-              </tr>
-
-            </thead>
-
-
-            <tbody
-              id="employeeCoursesTableBody"
-              class="divide-y divide-slate-100"
-            >
-
-              <tr>
-
-                <td
-                  colspan="4"
-                  class="px-5 py-10 text-center text-xs text-slate-400"
-                >
-                  جارٍ تحميل الدورات...
-                </td>
-
-              </tr>
-
-            </tbody>
-
-          </table>
-
-        </div>
-
+    <!-- الإجراءات الحالية وتقدمها، ثم آخر ثلاثة إشعارات -->
+    <section class="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-900">المطلوب منك الآن</h3>
+        <div id="currentAction" aria-live="polite" class="mt-3 text-xs leading-5 text-slate-500">جارٍ التحقق من الإجراءات...</div>
       </article>
 
+      <article class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm">
+        <h3 class="text-sm font-bold text-slate-900">تقدم الإجراءات</h3>
+        <ol id="courseProgress" class="mt-3 space-y-2 text-xs" aria-label="مراحل المشاركة في الدورة">
+          <li class="text-slate-500">جارٍ تحميل حالة المشاركة...</li>
+        </ol>
+      </article>
 
-      <!-- Right Side -->
-      <div class="space-y-5 xl:col-span-4">
-
-
-        <!-- Quick Actions -->
-        <section
-          class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-        >
-
-          <h3 class="text-sm font-bold text-slate-900">
-            إجراءات سريعة
-          </h3>
-
-          <div class="mt-4 grid grid-cols-2 gap-2.5">
-
-
-            <a
-              href="./main-courses.html"
-              class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold"
-            >
-
-              <span class="text-lg">
-                📚
-              </span>
-
-              <p class="mt-1.5 text-xs font-semibold">
-                دوراتي
-              </p>
-
-            </a>
-
-
-            <a
-              href="./main-courses.html"
-              class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold"
-            >
-
-              <span class="text-lg">
-                📝
-              </span>
-
-              <p class="mt-1.5 text-xs font-semibold">
-                الاستمارات
-              </p>
-
-            </a>
-
-
-            <a
-              href="./profile.html"
-              class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold"
-            >
-
-              <span class="text-lg">
-                👤
-              </span>
-
-              <p class="mt-1.5 text-xs font-semibold">
-                الملف الشخصي
-              </p>
-
-            </a>
-
-
-            <a
-              href="./notifications.html"
-              class="rounded-lg border border-slate-200 bg-slate-50 p-3 text-center transition hover:border-brand-gold hover:bg-brand-lightGold"
-            >
-
-              <span class="text-lg">
-                🔔
-              </span>
-
-              <p class="mt-1.5 text-xs font-semibold">
-                الإشعارات
-              </p>
-
-            </a>
-
+      <section class="rounded-xl border border-slate-200 bg-white p-3 shadow-sm md:col-span-2 xl:col-span-1">
+        <div class="flex items-center justify-between">
+          <div>
+            <h3 class="text-sm font-bold text-slate-900">آخر الإشعارات</h3>
+            <p class="mt-1 text-[11px] text-slate-500">آخر المستجدات والإجراءات الخاصة بك.</p>
           </div>
-
-        </section>
-
-
-        <!-- Recent Notifications -->
-        <section
-          class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm"
-        >
-
-          <div class="flex items-center justify-between">
-
-            <div>
-
-              <h3 class="text-sm font-bold text-slate-900">
-                آخر الإشعارات
-              </h3>
-
-              <p class="mt-1 text-[11px] text-slate-500">
-                آخر المستجدات والإجراءات الخاصة بك.
-              </p>
-
-            </div>
-
-            <a
-              href="./notifications.html"
-              class="text-[11px] font-bold text-brand-darkGold hover:underline"
-            >
-              الكل
-            </a>
-
-          </div>
-
-
-          <div
-            id="recentNotificationsList"
-            class="mt-4 space-y-3"
-          >
-
-            <p class="text-center text-xs text-slate-400">
-              جارٍ تحميل الإشعارات...
-            </p>
-
-          </div>
-
-        </section>
-
-      </div>
-
+          <a href="./notifications.html" class="text-[11px] font-bold text-brand-darkGold hover:underline">الكل</a>
+        </div>
+        <div id="recentNotificationsList" class="mt-3 space-y-2">
+          <p class="text-center text-xs text-slate-400">جارٍ تحميل الإشعارات...</p>
+        </div>
+      </section>
     </section>
 
   </main>

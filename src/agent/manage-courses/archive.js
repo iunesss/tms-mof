@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
 
 import {
   api,
@@ -56,7 +57,7 @@ function renderCourses(courses) {
   if (!courses.length) {
     body.innerHTML = `
       <tr>
-        <td colspan="7" class="px-5 py-10 text-center text-xs text-slate-400">
+        <td colspan="6" class="px-5 py-10 text-center text-xs text-slate-400">
           لا توجد دورات سابقة خاصة بقطاعك.
         </td>
       </tr>
@@ -86,10 +87,6 @@ function renderCourses(courses) {
             ${formatDate(course.end_date)}
           </td>
 
-          <td class="px-5 py-3 font-bold text-slate-700">
-            ${Number(course.sector_candidates_count || 0)}
-          </td>
-
           <td class="px-5 py-3">
             <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
               ${courseStatusText(course.status)}
@@ -98,11 +95,12 @@ function renderCourses(courses) {
 
           <td class="px-5 py-3">
             <a
-              href="./course-info.html?id=${encodeURIComponent(course.id)}"
+              href="./course-info.html?id=${encodeURIComponent(course.id)}&from=archive"
               class="inline-block rounded-lg border border-brand-gold px-3 py-1.5 text-[11px] font-bold text-brand-darkGold transition hover:bg-brand-lightGold"
             >
               عرض التفاصيل
             </a>
+            ${course.final_report?.file_url ? `<a href="${escapeHtml(course.final_report.file_url)}" target="_blank" rel="noopener" class="mr-2 inline-block rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50">عرض التقرير</a>` : '<span class="mr-2 inline-block rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-400">لا يوجد تقرير</span>'}
           </td>
         </tr>
       `
@@ -149,7 +147,7 @@ async function loadArchive() {
   } catch (error) {
     document.querySelector('#archiveCoursesTableBody').innerHTML = `
       <tr>
-        <td colspan="7" class="px-5 py-10 text-center text-xs text-rose-600">
+        <td colspan="6" class="px-5 py-10 text-center text-xs text-rose-600">
           ${escapeHtml(error.message)}
         </td>
       </tr>
@@ -170,17 +168,14 @@ async function initialize() {
   const user = await protectPage(['AGENT']);
 
   if (!user) return;
+  bindLiveFilters('main', () => {
+    state.page = 1;
+    loadArchive();
+  });
 
   setAgentIdentity(user);
 
   document.querySelector('#logoutButton').addEventListener('click', logout);
-
-  document
-    .querySelector('#searchArchiveButton')
-    .addEventListener('click', () => {
-      state.page = 1;
-      loadArchive();
-    });
 
   document
     .querySelector('#clearArchiveFiltersButton')

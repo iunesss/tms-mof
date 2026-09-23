@@ -22,42 +22,6 @@ function formatDate(value) {
 }
 
 
-function courseStatusText(status) {
-  const statuses = {
-    DRAFT: 'مسودة',
-    OPEN_FOR_NOMINATION: 'مفتوحة للترشيح',
-    NOMINATION_CLOSED: 'أُغلق الترشيح',
-    CANDIDATE_PROCESSING: 'قيد معالجة المرشحين',
-    ACTIVE: 'نشطة',
-    COMPLETED: 'مكتملة',
-    ARCHIVED: 'مؤرشفة',
-    CANCELLED: 'ملغاة',
-  };
-
-  return statuses[status] || status || '—';
-}
-
-
-function courseTypeText(type) {
-  return type === 'MISSION'
-    ? 'مهمة / بعثة'
-    : 'دورة تدريبية';
-}
-
-
-function statusClass(status) {
-  const classes = {
-    OPEN_FOR_NOMINATION: 'bg-blue-50 text-blue-700',
-    NOMINATION_CLOSED: 'bg-amber-50 text-amber-700',
-    CANDIDATE_PROCESSING: 'bg-violet-50 text-violet-700',
-    ACTIVE: 'bg-emerald-50 text-emerald-700',
-    COMPLETED: 'bg-slate-100 text-slate-600',
-    ARCHIVED: 'bg-slate-100 text-slate-600',
-    CANCELLED: 'bg-rose-50 text-rose-700',
-  };
-
-  return classes[status] || 'bg-slate-100 text-slate-600';
-}
 
 
 async function api(url, options = {}) {
@@ -115,75 +79,74 @@ function setEmployeeIdentity(user) {
 }
 
 
-function renderCourses(courses = []) {
-  const body = document.querySelector(
-    '#employeeCoursesTableBody'
-  );
-
-  if (!courses.length) {
-    body.innerHTML = `
-      <tr>
-        <td
-          colspan="4"
-          class="px-5 py-10 text-center text-xs text-slate-400"
-        >
-          لا توجد دورات مرشح لها حاليًا.
-        </td>
-      </tr>
-    `;
-
+/** يحدد الإجراء التالي من حالة الاستمارات والمرشح؛ ولا يعد الانتظار إجراءً مطلوبًا. */
+function renderCurrentAction(course, details) {
+  const container = document.querySelector('#currentAction');
+  if (!course) {
+    container.textContent = 'لا توجد دورة حالية، ولا يلزمك إجراء الآن.';
     return;
   }
 
-  body.innerHTML = courses
-    .map(
-      (course) => `
-        <tr class="transition hover:bg-slate-50">
+  const forms = (details.forms || []).filter((form) => Number(form.is_required));
+  const rejected = forms.find((form) => form.submission_status === 'REJECTED');
+  const missing = forms.find((form) => !form.submitted_file_url);
+  const status = details.candidate?.status;
+  let message = 'لا يلزمك إجراء الآن. انتظر تحديث حالة مشاركتك.';
+  let showLink = false;
 
-          <td class="px-5 py-3">
+  if (rejected) {
+    message = `أعد رفع الاستمارة المرفوضة: ${rejected.title}.`;
+    showLink = true;
+  } else if (missing) {
+    message = `حمّل وعبّئ ثم ارفع الاستمارة: ${missing.title}.`;
+    showLink = true;
+  } else if (['CONFIRMED', 'PARTICIPATING', 'COMPLETED'].includes(status)) {
+    message = 'تم تأكيد مشاركتك. لا توجد استمارات مطلوبة منك الآن.';
+  } else if (forms.some((form) => form.submission_status !== 'APPROVED')) {
+    message = 'استماراتك مرفوعة وتنتظر المراجعة. لا يلزمك إجراء الآن.';
+  } else {
+    message = 'استماراتك معتمدة. انتظر قرار تأكيد المشاركة.';
+  }
 
-            <p class="font-bold text-slate-800">
-              ${escapeHtml(course.title)}
-            </p>
+  container.innerHTML = `
+    <p class="font-semibold text-slate-700">${escapeHtml(message)}</p>
+    ${showLink ? `<a href="./course-info.html?id=${encodeURIComponent(course.id)}"
+      class="mt-4 inline-block rounded-lg bg-brand-gold px-4 py-2 font-bold text-white">
+      فتح الاستمارات
+    </a>` : ''}
+  `;
+}
 
-            <p class="mt-1 text-[10px] text-slate-400">
-              ${escapeHtml(course.course_no || '—')}
-            </p>
+/** يعرض مراحل المشاركة وفق الحالة الفعلية؛ اعتماد الاستمارات يختلف عن تأكيد المرشح. */
+function renderCourseProgress(course, details) {
+  const container = document.querySelector('#courseProgress');
+  if (!course) {
+    container.innerHTML = '<li class="text-slate-500">يظهر تقدمك بعد اختيارك لدورة.</li>';
+    return;
+  }
 
-          </td>
+  const forms = (details.forms || []).filter((form) => Number(form.is_required));
+  const hasForms = forms.length > 0;
+  const confirmed = ['CONFIRMED', 'PARTICIPATING', 'COMPLETED']
+    .includes(details.candidate?.status);
+  const steps = [
+    { title: 'تم اختيارك للدورة', done: true },
+    { title: hasForms ? 'رفع الاستمارات المطلوبة' : 'لا توجد استمارات إلزامية',
+      done: !hasForms || forms.every((form) => Boolean(form.submitted_file_url)) },
+    { title: hasForms ? 'اعتماد الاستمارات' : 'الاستمارات غير مطلوبة',
+      done: !hasForms || forms.every((form) => form.submission_status === 'APPROVED') },
+    { title: 'تأكيد المشاركة', done: confirmed },
+  ];
 
-
-          <td class="px-5 py-3 text-slate-600">
-            ${courseTypeText(course.course_type)}
-          </td>
-
-
-          <td class="px-5 py-3">
-
-            <span
-              class="rounded-lg px-2 py-1 text-[10px] font-bold ${statusClass(course.status)}"
-            >
-              ${courseStatusText(course.status)}
-            </span>
-
-          </td>
-
-
-          <td class="px-5 py-3">
-
-            <a
-              href="./course-info.html?id=${encodeURIComponent(course.id)}"
-              class="text-[11px] font-bold text-brand-darkGold hover:underline"
-            >
-              تفاصيل الدورة ←
-            </a>
-
-          </td>
-
-        </tr>
-      `
-    )
-    .join('');
+  container.innerHTML = steps.map((step) => `
+    <li class="flex items-center gap-2 ${step.done ? 'font-semibold text-emerald-700' : 'text-slate-500'}">
+      <span aria-hidden="true" class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full
+        ${step.done ? 'bg-emerald-100' : 'bg-slate-100'}">
+        ${step.done ? '✓' : '○'}
+      </span>
+      <span>${step.title}</span>
+    </li>
+  `).join('');
 }
 
 
@@ -202,11 +165,11 @@ function renderNotifications(notifications = []) {
     return;
   }
 
-  container.innerHTML = notifications
+  container.innerHTML = notifications.slice(0, 3)
     .map(
       (notification) => `
         <article
-          class="rounded-lg border border-slate-100 bg-slate-50 p-3"
+          class="rounded-lg border border-slate-100 bg-slate-50 p-2"
         >
 
           <div class="flex items-start gap-2">
@@ -227,7 +190,7 @@ function renderNotifications(notifications = []) {
               </p>
 
               <p
-                class="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500"
+                class="mt-1 line-clamp-1 text-[11px] leading-5 text-slate-500"
               >
                 ${escapeHtml(notification.message)}
               </p>
@@ -264,57 +227,68 @@ function setUnreadBadge(total) {
 
 
 async function loadDashboard() {
-  const data = await api('/api/dashboard');
+  const [data, currentCoursesData, archiveData] = await Promise.all([
+    api('/api/dashboard'),
+    api('/api/courses'),
+    api('/api/courses/archive'),
+  ]);
 
   const summary = data.summary || {};
   const employee = data.employee || {};
   const department = employee.department || {};
+  const currentCourses = currentCoursesData.courses || [];
+  const currentCourse = currentCourses[0] || null;
 
   document.querySelector('#departmentName').textContent =
     department.name || 'لم يتم تعيين قسم';
 
-  document.querySelector('#jobTitle').textContent =
-    employee.jobTitle || '—';
+  const jobTitle = document.querySelector('#jobTitle');
+  jobTitle.textContent = employee.jobTitle || '';
+  jobTitle.classList.toggle('hidden', !employee.jobTitle);
 
-  /*
-    الباك إند الحالي يعيد دورة حالية واحدة فقط.
-    لذلك العدد يكون 1 عند وجود دورة، و0 عند عدم وجودها.
-  */
-  document.querySelector('#nominatedCoursesCount').textContent =
-    summary.hasCurrentCourse ? 1 : 0;
+  document.querySelector('#currentCourseCount').textContent =
+    currentCourses.length;
 
-  document.querySelector('#activeCoursesCount').textContent =
-    summary.hasCurrentCourse ? 1 : 0;
+  document.querySelector('#previousCoursesCount').textContent =
+    (archiveData.courses || []).length;
 
-  /*
-    الباك إند الحالي لا يعيد عدد الاستمارات المطلوبة بعد.
-  */
-  document.querySelector('#pendingFormsCount').textContent = '0';
+  // الاستمارات الإلزامية غير المعتمدة تُحسب من تفاصيل دورة الموظف الفعلية.
+  const formsCount = document.querySelector('#pendingFormsCount');
+  let currentDetails = null;
+  if (currentCourse) {
+    try {
+      currentDetails = await api(`/api/courses/${currentCourse.id}`);
+      formsCount.textContent = (currentDetails.forms || []).filter((form) =>
+        Number(form.is_required) && form.submission_status !== 'APPROVED'
+      ).length;
+    } catch (error) {
+      formsCount.textContent = '—';
+      console.error('تعذر تحميل عدد الاستمارات:', error);
+    }
+  } else {
+    formsCount.textContent = '0';
+  }
 
   document.querySelector('#unreadNotificationsCount').textContent =
     summary.unreadNotifications ?? 0;
 
   setUnreadBadge(Number(summary.unreadNotifications || 0));
 
-  /*
-    الباك إند يعيد currentCourse وليس recentCourses.
-  */
-  renderCourses(
-    data.currentCourse ? [data.currentCourse] : []
-  );
+  if (currentCourse && !currentDetails) {
+    document.querySelector('#currentAction').textContent =
+      'تعذر تحميل الإجراءات الآن. حاول تحديث الصفحة.';
+    document.querySelector('#courseProgress').innerHTML =
+      '<li class="text-slate-500">تعذر تحميل تقدم الإجراءات.</li>';
+  } else {
+    renderCurrentAction(currentCourse, currentDetails);
+    renderCourseProgress(currentCourse, currentDetails);
+  }
 
   renderNotifications(data.recentNotifications || []);
 }
 
 
 async function initialize() {
-
-  /*
-    لاحقًا سنتأكد من اسم الـROLE الحقيقي للموظف
-    من نظام الصلاحيات عندك.
-
-    لا نريد افتراضه قبل مراجعة الـBackend.
-  */
 
   const user = await protectPage([
     'EMPLOYEE',
@@ -346,20 +320,12 @@ async function initialize() {
     );
 
 
-    document.querySelector(
-      '#employeeCoursesTableBody'
-    ).innerHTML = `
-      <tr>
-
-        <td
-          colspan="4"
-          class="px-5 py-10 text-center text-xs text-rose-600"
-        >
-          ${escapeHtml(error.message)}
-        </td>
-
-      </tr>
-    `;
+    document.querySelector('#currentAction').textContent =
+      error.message || 'تعذر تحميل لوحة التحكم.';
+    document.querySelector('#courseProgress').innerHTML =
+      '<li class="text-slate-500">تعذر تحميل تقدم الإجراءات.</li>';
+    document.querySelector('#recentNotificationsList').textContent =
+      'تعذر تحميل الإشعارات.';
 
   }
 }

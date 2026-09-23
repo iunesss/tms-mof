@@ -138,7 +138,7 @@ async function getDashboard(req, res) {
             c.status
 
           ORDER BY c.created_at DESC
-          LIMIT 5
+          LIMIT 3
         `,
         [req.user.id, department.id]
       ),
@@ -154,7 +154,7 @@ async function getDashboard(req, res) {
           FROM notifications
           WHERE recipient_user_id = ?
           ORDER BY is_read ASC, created_at DESC
-          LIMIT 5
+          LIMIT 3
         `,
         [req.user.id]
       ),

@@ -27,14 +27,20 @@ async function getDashboard(req, res) {
     ] = await Promise.all([
       pool.execute(
         `
-          SELECT COUNT(DISTINCT eda.employee_user_id) AS total
-          FROM employee_department_assignments eda
-          INNER JOIN departments d
-            ON d.id = eda.department_id
-          INNER JOIN users u
-            ON u.id = eda.employee_user_id
+          SELECT COUNT(DISTINCT members.user_id) AS total
+          FROM (
+            SELECT eda.employee_user_id AS user_id, eda.department_id
+            FROM employee_department_assignments eda
+            WHERE eda.end_date IS NULL
+            UNION ALL
+            SELECT dma.manager_user_id AS user_id, dma.department_id
+            FROM department_manager_assignments dma
+            WHERE dma.end_date IS NULL
+          ) members
+          INNER JOIN departments d ON d.id = members.department_id
+          INNER JOIN users u ON u.id = members.user_id
           WHERE d.sector_id = ?
-            AND eda.end_date IS NULL
+            AND d.deleted_at IS NULL
             AND u.is_active = TRUE
             AND u.deleted_at IS NULL
         `,
@@ -64,8 +70,13 @@ async function getDashboard(req, res) {
           FROM nominations n
           INNER JOIN departments d
             ON d.id = n.department_id
+          INNER JOIN courses c ON c.id = n.course_id
+          INNER JOIN course_sector_targets cst
+            ON cst.course_id = c.id AND cst.sector_id = d.sector_id
           WHERE d.sector_id = ?
             AND n.status = 'SUBMITTED'
+            AND c.deleted_at IS NULL
+            AND c.status NOT IN ('COMPLETED', 'ARCHIVED', 'CANCELLED')
         `,
         [sector.id]
       ),
@@ -111,8 +122,8 @@ async function getDashboard(req, res) {
             c.title,
             c.course_type,
             c.status
-          ORDER BY c.created_at DESC
-          LIMIT 5
+          ORDER BY pending_nominations DESC, c.created_at DESC
+          LIMIT 3
         `,
         [sector.id]
       ),
@@ -128,7 +139,7 @@ async function getDashboard(req, res) {
           FROM notifications
           WHERE recipient_user_id = ?
           ORDER BY is_read ASC, created_at DESC
-          LIMIT 5
+          LIMIT 3
         `,
         [req.user.id]
       ),

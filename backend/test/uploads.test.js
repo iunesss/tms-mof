@@ -18,6 +18,7 @@ app.post('/profile', uploads.profileUpload.single('passportFile'), received);
 app.post('/form', uploads.employeeFormUpload.single('formFile'), received);
 app.post('/attachment', uploads.candidateAttachmentUpload.single('attachmentFile'), received);
 app.post('/course', uploads.courseUpload, received);
+app.patch('/course-report', uploads.courseUpload, received);
 app.use(errorHandler);
 let server;
 let base;
@@ -29,10 +30,10 @@ after(async () => {
   await new Promise((resolve) => server.close(resolve));
   for (const file of createdFiles) await fs.unlink(file);
 });
-async function send(url, field, name, type, size = 16) {
+async function send(url, field, name, type, size = 16, method = 'POST') {
   const form = new FormData();
   form.append(field, new Blob([new Uint8Array(size)], { type }), name);
-  return fetch(base + url, { method: 'POST', body: form });
+  return fetch(base + url, { method, body: form });
 }
 test('all upload purposes preserve public directories and multipart field names', async () => {
   for (const [url, field, directory] of [
@@ -52,6 +53,13 @@ test('profile rejects Word while forms accept it', async () => {
   const mime = 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
   assert.equal((await send('/profile', 'passportFile', 'test.docx', mime)).status, 400);
   assert.equal((await send('/form', 'formFile', 'test.docx', mime)).status, 200);
+});
+test('final reports are stored separately under public/uploads/reports', async () => {
+  const res = await send('/course-report', 'finalReport', 'report.pdf', 'application/pdf', 16, 'PATCH');
+  assert.equal(res.status, 200);
+  const [file] = await res.json();
+  assert.equal(path.dirname(file.path), path.join(uploads.UPLOAD_ROOT, 'reports'));
+  assert.equal((await fs.stat(file.path)).size, 16);
 });
 test('mismatched extension and unknown multipart fields are rejected', async () => {
   assert.equal((await send('/profile', 'passportFile', 'test.html', 'application/pdf')).status, 400);

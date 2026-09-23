@@ -1,4 +1,18 @@
 import { protectPage } from '../shared/auth-guard.js';
+import { bindLiveFilters } from '../shared/live-filters.js';
+import { courseStatusText, candidateStatusText } from '../shared/status-labels.js';
+
+let currentCourses = [];
+
+function statusClass(status) {
+  const classes = {
+    ACTIVE: 'bg-brand-lightGold text-brand-darkGold',
+    OPEN_FOR_NOMINATION: 'bg-brand-lightGold text-brand-darkGold',
+    NOMINATION_CLOSED: 'bg-amber-50 text-amber-700',
+    CANDIDATE_PROCESSING: 'bg-violet-50 text-violet-700',
+  };
+  return classes[status] || 'bg-slate-100 text-slate-600';
+}
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -17,17 +31,6 @@ function formatDate(value) {
     month: 'short',
     day: 'numeric',
   }).format(new Date(value));
-}
-
-function courseStatusText(status) {
-  const labels = {
-    ACTIVE: 'نشطة',
-    CANDIDATE_PROCESSING: 'قيد معالجة المرشحين',
-    OPEN_FOR_NOMINATION: 'مفتوحة للترشيح',
-    NOMINATION_CLOSED: 'أُغلق الترشيح',
-  };
-
-  return labels[status] || status || '—';
 }
 
 async function api(url, options = {}) {
@@ -74,59 +77,68 @@ function renderCourses(courses) {
   const grid = document.querySelector('#coursesGrid');
 
   document.querySelector('#coursesCountText').textContent =
-    `إجمالي الدورات الحالية: ${courses.length}`;
+    `الدورات المعروضة: ${courses.length}`;
 
   if (!courses.length) {
     grid.innerHTML = `
       <div class="rounded-xl border border-dashed border-slate-300 px-5 py-12 text-center text-xs text-slate-400 md:col-span-2 xl:col-span-3">
-        لا توجد دورات حالية مقبولة لك.
+        لا توجد دورات مطابقة أو مقبولة لك حاليًا.
       </div>
     `;
     return;
   }
 
-  grid.innerHTML = courses.map((course) => {
+  grid.innerHTML = courses.slice(0, 3).map((course) => {
     const detailsUrl = `./course-info.html?id=${encodeURIComponent(course.id)}`;
-    
+
     return `
-      <article 
-        onclick="window.location.href='${detailsUrl}'"
-        class="cursor-pointer rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-sm"
-      >
-        <div class="flex items-center justify-between gap-3">
-          <span class="rounded-lg bg-brand-lightGold px-2.5 py-1 text-[10px] font-bold text-brand-darkGold">
-            ${course.course_type === 'MISSION' ? 'مهمة / بعثة' : 'دورة تدريبية'}
-          </span>
-
-          <span class="rounded-lg bg-emerald-50 px-2.5 py-1 text-[10px] font-bold text-emerald-700">
-            ${courseStatusText(course.status)}
-          </span>
-        </div>
-
-        <p class="mt-5 text-[11px] font-semibold text-slate-400">
-          ${escapeHtml(course.course_no || 'بدون رقم')}
-        </p>
-
-        <h3 class="mt-1 text-sm font-bold text-slate-900">
-          ${escapeHtml(course.title)}
-        </h3>
-
-        <p class="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">
-          ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
-        </p>
-
-        <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
-          <span class="text-[11px] text-slate-500">
-            البداية: ${formatDate(course.start_date)}
-          </span>
-
-          <a href="${detailsUrl}" onclick="event.stopPropagation();" class="text-xs font-bold text-brand-darkGold hover:underline">
-            التفاصيل ←
-          </a>
-        </div>
-      </article>
+      <a href="${detailsUrl}"
+         class="group block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-md">
+        <article class="flex h-full flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="rounded-lg px-2.5 py-1 text-[11px] font-bold ${statusClass(course.status)}">
+                ${courseStatusText(course.status)}
+              </span>
+              <span class="text-[11px] text-slate-400">${candidateStatusText(course.candidate_status)}</span>
+            </div>
+            <p class="mt-5 text-[11px] font-semibold text-brand-gold">
+              ${course.course_type === 'MISSION' ? 'مهمة' : 'دورة تدريبية'}
+            </p>
+            <h3 class="mt-1 text-sm font-bold text-slate-900 transition group-hover:text-brand-gold">
+              ${escapeHtml(course.title)}
+            </h3>
+            <p class="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">
+              ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
+            </p>
+          </div>
+          <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+            <span class="text-[11px] text-slate-500">البدء: ${formatDate(course.start_date)}</span>
+            <span class="text-xs font-bold text-slate-800 transition group-hover:text-brand-gold">التفاصيل ←</span>
+          </div>
+        </article>
+      </a>
     `;
   }).join('');
+}
+
+function filterCourses() {
+  const search = document.querySelector('#courseSearchInput')
+    .value.trim().toLocaleLowerCase('ar');
+  const type = document.querySelector('#courseTypeFilter').value;
+  const status = document.querySelector('#courseStatusFilter').value;
+
+  const filtered = currentCourses.filter((course) => {
+    const matchesSearch = !search ||
+      `${course.title} ${course.course_no || ''}`
+        .toLocaleLowerCase('ar')
+        .includes(search);
+    return matchesSearch &&
+      (!type || course.course_type === type) &&
+      (!status || course.status === status);
+  });
+
+  renderCourses(filtered);
 }
 
 async function initialize() {
@@ -137,12 +149,21 @@ async function initialize() {
     user.fullName || user.full_name || user.username || 'الموظف';
 
   document.querySelector('#logoutButton').addEventListener('click', logout);
-
+  bindLiveFilters('#coursesFiltersForm', filterCourses);
+  document.querySelector('#coursesFiltersForm').addEventListener('submit', (event) => {
+    event.preventDefault();
+    filterCourses();
+  });
+  document.querySelector('#resetCoursesFiltersButton').addEventListener('click', () => {
+    document.querySelector('#coursesFiltersForm').reset();
+    filterCourses();
+  });
   try {
     const data = await api('/api/courses');
     if (!data) return;
 
-    renderCourses(data.courses || []);
+    currentCourses = data.courses || [];
+    renderCourses(currentCourses);
     setBadge(Number(data.unreadCount || 0));
   } catch (error) {
     document.querySelector('#coursesGrid').innerHTML = `

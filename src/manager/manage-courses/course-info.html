@@ -34,7 +34,7 @@
 
   <header class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-brand-navy text-white shadow-lg">
     <div class="mx-auto flex h-16 max-w-[92%] items-center justify-between px-4 sm:px-6">
-      <a href="./main-courses.html" class="flex items-center gap-2.5">
+      <a id="backToCoursesLogo" href="./main-courses.html" class="flex items-center gap-2.5">
         <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-md">
           <img src="/favicon.png" alt="شعار النظام" class="h-full w-full object-contain p-1" />
         </div>
@@ -45,7 +45,7 @@
         </div>
       </a>
 
-      <a href="./main-courses.html" class="rounded-lg border border-slate-600 px-3 py-1.5 text-[11px] font-semibold text-slate-200">
+      <a id="backToCoursesButton" href="./main-courses.html" class="rounded-lg border border-slate-600 px-3 py-1.5 text-[11px] font-semibold text-slate-200">
         العودة إلى الدورات
       </a>
     </div>
@@ -69,9 +69,8 @@
         </div>
 
         <div class="rounded-xl border border-brand-gold/30 bg-brand-lightGold px-4 py-3 text-xs">
-          <p class="text-slate-500">قسمك</p>
-          <p id="departmentName" class="mt-1 font-bold text-brand-darkGold">جارٍ التحميل...</p>
-          <p id="sectorName" class="mt-1 text-[11px] text-slate-500">—</p>
+          <p class="text-slate-500">حالة مشاركتك</p>
+          <p id="selfParticipationStatus" class="mt-1 font-bold text-brand-darkGold">جارٍ التحميل...</p>
         </div>
       </div>
     </section>
@@ -94,7 +93,7 @@
       </div>
     </section>
 
-    <!-- يختفي تلقائيًا بعد إرسال الترشيحات إلى الوكيل -->
+    <!-- يبقى متاحًا حتى اكتمال حصة القسم أو انتهاء موعد الترشيح. -->
     <section id="nominationEditorSection" class="overflow-hidden rounded-xl border border-brand-gold/30 bg-white shadow-sm">
       <div class="flex flex-col gap-4 border-b border-brand-gold/20 bg-brand-lightGold/40 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
@@ -145,7 +144,7 @@
     <!-- يظهر دائمًا لمتابعة من تم ترشيحهم -->
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div class="border-b border-slate-200 px-5 py-4">
-        <h3 class="text-sm font-bold text-slate-900">مرشحو القسم</h3>
+        <h3 id="departmentCandidatesTitle" class="text-sm font-bold text-slate-900">مرشحو القسم</h3>
         <p id="departmentCandidatesText" class="mt-1 text-[11px] text-slate-500">
           جارٍ تحميل الترشيحات...
         </p>
@@ -178,7 +177,7 @@
     <section id="selfCandidateSection" class="hidden overflow-hidden rounded-xl border border-emerald-200 bg-white shadow-sm">
       <div class="border-b border-emerald-100 bg-emerald-50/50 px-5 py-4">
         <h3 class="text-sm font-bold text-emerald-900">استماراتي الخاصة بالدورة</h3>
-        <p class="mt-1 text-[11px] text-emerald-700">
+        <p id="selfFormsDescription" class="mt-1 text-[11px] text-emerald-700">
           لأنك مرشح في هذه الدورة، يمكنك تحميل الاستمارات المطلوبة ورفع النسخ المعبأة.
         </p>
       </div>
@@ -186,6 +185,12 @@
       <div id="selfCourseFormsList" class="space-y-3 p-5 text-xs text-slate-500">
         جارٍ تحميل الاستمارات...
       </div>
+    </section>
+
+    <!-- التذكرة والتأشيرة والمستندات المرسلة لمدير القسم عندما يكون مرشحًا. -->
+    <section id="selfCandidateAttachmentsSection" class="hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 class="border-b border-slate-200 pb-3 text-sm font-bold text-slate-900">مستندات خاصة بالدورة</h3>
+      <div id="selfCandidateAttachmentsList" class="mt-4 text-xs text-slate-500">جارٍ تحميل المستندات...</div>
     </section>
 
     <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">

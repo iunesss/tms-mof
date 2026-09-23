@@ -1,5 +1,6 @@
 import { protectPage } from '../../shared/auth-guard.js';
 import { notify } from '../../shared/notify.js';
+import { formStatusText, documentStatusText, profileDocumentTypeText } from '../../shared/status-labels.js';
 
 import {
   api,
@@ -75,30 +76,6 @@ function attachmentTypeText(type) {
   return labels[type] || type || 'مستند';
 }
 
-function submissionStatusText(status) {
-  const labels = {
-    PENDING: 'بانتظار الرفع',
-    SUBMITTED: 'مرفوعة وتنتظر المراجعة',
-    UNDER_REVIEW: 'قيد المراجعة',
-    APPROVED: 'معتمدة',
-    REJECTED: 'مرفوضة وتحتاج إعادة رفع',
-    RESUBMITTED: 'أُعيد رفعها وتنتظر المراجعة',
-  };
-
-  return labels[status] || status || '—';
-}
-
-function profileDocumentStatusText(status) {
-  const labels = {
-    PENDING: 'بانتظار المراجعة',
-    UNDER_REVIEW: 'قيد المراجعة',
-    APPROVED: 'معتمد',
-    REJECTED: 'مرفوض ويحتاج إعادة رفع',
-  };
-
-  return labels[status] || status || '—';
-}
-
 function openReviewModal(kind, id, title) {
   selectedReview = { kind, id };
 
@@ -152,7 +129,7 @@ function renderForms(forms = []) {
 
               <p class="mt-1 text-[11px] text-slate-500">
                 ${Number(form.is_required) ? 'استمارة إلزامية' : 'استمارة اختيارية'}
-                — ${submissionStatusText(form.status)}
+                — ${formStatusText(form.status)}
               </p>
 
               ${
@@ -248,11 +225,11 @@ function renderProfileDocuments(documents = []) {
       ${documents.map((document) => `
         <article class="rounded-xl border border-slate-200 bg-slate-50 p-4">
           <p class="text-xs font-bold text-slate-800">
-            ${escapeHtml(document.label || document.document_type)}
+            ${escapeHtml(document.label || profileDocumentTypeText(document.document_type))}
           </p>
 
           <p class="mt-1 text-[11px] text-slate-500">
-            الحالة: ${profileDocumentStatusText(document.status)}
+            الحالة: ${documentStatusText(document.status)}
           </p>
 
           ${
@@ -408,6 +385,15 @@ async function loadCandidate() {
 
   document.querySelector('#candidateStatusBadge').textContent =
     candidateStatusText(candidate.status);
+
+  const preliminaryButton = document.querySelector('#preliminaryAcceptButton');
+  const confirmButton = document.querySelector('#confirmCandidateButton');
+  preliminaryButton.disabled = !['SELECTED', 'DOCUMENTS_PENDING', 'DOCUMENTS_UNDER_REVIEW']
+    .includes(candidate.status);
+  confirmButton.disabled = candidate.status !== 'PRELIMINARILY_ACCEPTED';
+  confirmButton.title = confirmButton.disabled
+    ? 'يجب القبول المبدئي واعتماد الاستمارات والجواز أولًا.'
+    : '';
 
   setText('#snapshotFullName', snapshot.full_name || candidate.full_name);
   setText(

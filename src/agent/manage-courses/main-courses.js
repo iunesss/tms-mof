@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
 
 import {
   api,
@@ -10,21 +11,20 @@ import {
   loadNotificationsBadge,
 } from '../agent-api.js';
 
-const state = {
-  page: 1,
-  limit: 9,
-};
-
 function courseTypeText(type) {
   return type === 'MISSION' ? 'مهمة / بعثة' : 'دورة تدريبية';
 }
 
 function statusClass(status) {
   const classes = {
-    OPEN_FOR_NOMINATION: 'bg-blue-50 text-blue-700',
+    OPEN_FOR_NOMINATION: 'bg-brand-lightGold text-brand-darkGold',
     NOMINATION_CLOSED: 'bg-amber-50 text-amber-700',
     CANDIDATE_PROCESSING: 'bg-violet-50 text-violet-700',
-    ACTIVE: 'bg-emerald-50 text-emerald-700',
+    ACTIVE: 'bg-brand-lightGold text-brand-darkGold',
+    DRAFT: 'bg-slate-100 text-slate-600',
+    COMPLETED: 'bg-emerald-50 text-emerald-700',
+    ARCHIVED: 'bg-blue-50 text-blue-700',
+    CANCELLED: 'bg-rose-50 text-rose-700',
   };
 
   return classes[status] || 'bg-slate-100 text-slate-600';
@@ -42,10 +42,13 @@ function renderCourses(courses) {
     return;
   }
 
-  grid.innerHTML = courses
+  grid.innerHTML = courses.slice(0, 3)
     .map(
       (course) => `
-        <article class="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-sm">
+        <a href="./course-info.html?id=${encodeURIComponent(course.id)}"
+           class="group block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-md">
+        <article class="flex h-full flex-col justify-between">
+          <div>
           <div class="flex items-center justify-between gap-3">
             <span class="rounded-lg px-2.5 py-1 text-[11px] font-bold ${statusClass(course.status)}">
               ${courseStatusText(course.status)}
@@ -60,7 +63,7 @@ function renderCourses(courses) {
             ${courseTypeText(course.course_type)}
           </p>
 
-          <h4 class="mt-1 text-sm font-bold text-slate-900">
+          <h4 class="mt-1 text-sm font-bold text-slate-900 transition group-hover:text-brand-gold">
             ${escapeHtml(course.title)}
           </h4>
 
@@ -68,71 +71,16 @@ function renderCourses(courses) {
             ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
           </p>
 
-          <div class="mt-5 border-t border-slate-100 pt-4 text-[11px] text-slate-500">
-            <p>البداية: ${formatDate(course.start_date)}</p>
-            <p class="mt-1">النهاية: ${formatDate(course.end_date)}</p>
           </div>
-
-          <a
-            href="./course-info.html?id=${encodeURIComponent(course.id)}"
-            class="mt-4 block rounded-lg bg-brand-navy px-3 py-2 text-center text-[11px] font-bold text-white transition hover:bg-slate-700"
-          >
-            مراجعة الترشيحات
-          </a>
+          <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+            <span class="text-[11px] text-slate-500">البدء: ${formatDate(course.start_date)}</span>
+            <span class="text-xs font-bold text-slate-800 transition group-hover:text-brand-gold">التفاصيل ←</span>
+          </div>
         </article>
+        </a>
       `
     )
     .join('');
-}
-
-function renderPagination(pagination) {
-  const element = document.querySelector('#coursesPagination');
-  const totalPages = pagination.totalPages || 1;
-
-  element.innerHTML = `
-    <p class="text-slate-500">
-      صفحة ${pagination.page} من ${totalPages}
-      <span class="mr-2 text-[11px] text-slate-400">
-        (${pagination.total} دورة أو مهمة)
-      </span>
-    </p>
-
-    <div class="flex gap-2">
-      <button
-        id="previousCoursesPageButton"
-        type="button"
-        class="rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-        ${pagination.page <= 1 ? 'disabled' : ''}
-      >
-        السابق
-      </button>
-
-      <button
-        id="nextCoursesPageButton"
-        type="button"
-        class="rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-bold text-slate-700 disabled:cursor-not-allowed disabled:opacity-50"
-        ${pagination.page >= totalPages ? 'disabled' : ''}
-      >
-        التالي
-      </button>
-    </div>
-  `;
-
-  document
-    .querySelector('#previousCoursesPageButton')
-    .addEventListener('click', () => {
-      if (state.page <= 1) return;
-      state.page -= 1;
-      loadCourses();
-    });
-
-  document
-    .querySelector('#nextCoursesPageButton')
-    .addEventListener('click', () => {
-      if (pagination.page >= totalPages) return;
-      state.page += 1;
-      loadCourses();
-    });
 }
 
 async function loadCourses() {
@@ -145,8 +93,8 @@ async function loadCourses() {
   `;
 
   const query = new URLSearchParams({
-    page: String(state.page),
-    limit: String(state.limit),
+    page: '1',
+    limit: '50',
   });
 
   const search = document.querySelector('#courseSearchInput').value.trim();
@@ -171,7 +119,6 @@ async function loadCourses() {
       `إجمالي الدورات: ${pagination.total}`;
 
     renderCourses(courses);
-    renderPagination(pagination);
   } catch (error) {
     document.querySelector('#coursesCountText').textContent =
       'تعذر تحميل الدورات';
@@ -189,6 +136,15 @@ async function initialize() {
 
   if (!user) return;
 
+  const initialStatus = new URLSearchParams(window.location.search).get('status');
+  if (initialStatus) {
+    document.querySelector('#courseStatusFilter').value = initialStatus;
+  }
+
+  bindLiveFilters('#coursesFiltersForm', () => {
+    loadCourses();
+  });
+
   setAgentIdentity(user);
 
   document.querySelector('#logoutButton').addEventListener('click', logout);
@@ -197,7 +153,6 @@ async function initialize() {
     .querySelector('#coursesFiltersForm')
     .addEventListener('submit', (event) => {
       event.preventDefault();
-      state.page = 1;
       loadCourses();
     });
 
@@ -205,7 +160,6 @@ async function initialize() {
     .querySelector('#resetCoursesFiltersButton')
     .addEventListener('click', () => {
       document.querySelector('#coursesFiltersForm').reset();
-      state.page = 1;
       loadCourses();
     });
 

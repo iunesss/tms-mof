@@ -3,6 +3,7 @@ const crypto = require('crypto');
 
 const pool = require('../config/database');
 const { writeAuditLog } = require('../utils/audit');
+const { notifyCourseManagers } = require('../utils/notifications');
 const { getManagerDepartment } = require('../repositories/assignments.repository');
 
 function sendError(res, status, message) {
@@ -348,6 +349,28 @@ async function updateProfile(req, res) {
         employeeUserId,
         req.file
       );
+
+      const [[activeCandidate]] = await connection.query(
+        `SELECT c.id, co.title
+         FROM candidates c
+         INNER JOIN courses co ON co.id = c.course_id
+         WHERE c.employee_user_id = ?
+           AND c.status NOT IN ('COMPLETED', 'REJECTED', 'WITHDRAWN', 'REMOVED', 'CANCELLED')
+           AND co.status NOT IN ('COMPLETED', 'ARCHIVED', 'CANCELLED')
+         ORDER BY c.created_at DESC LIMIT 1`,
+        [employeeUserId]
+      );
+
+      if (activeCandidate) {
+        await notifyCourseManagers(connection, {
+          senderUserId: employeeUserId,
+          notificationType: 'PROFILE_DOCUMENT_RESUBMITTED',
+          title: 'تحديث مستند شخصي لمرشح',
+          message: `حدّث المرشح جواز السفر المرتبط بالدورة "${activeCandidate.title}" وهو جاهز للمراجعة.`,
+          relatedEntityType: 'CANDIDATE',
+          relatedEntityId: activeCandidate.id,
+        });
+      }
     }
 
     await writeAuditLog(connection, {

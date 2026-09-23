@@ -405,8 +405,16 @@ async function selectNominationCandidate(req, res) {
 
     const [[nomination]] = await connection.query(
       `
-        SELECT n.id
+        SELECT
+          n.id,
+          n.nominee_user_id,
+          n.nominated_by_user_id,
+          n.agent_user_id,
+          up.full_name AS employee_name,
+          co.title AS course_title
         FROM nominations n
+        INNER JOIN user_profiles up ON up.user_id = n.nominee_user_id
+        INNER JOIN courses co ON co.id = n.course_id
         LEFT JOIN candidates c
           ON c.source_nomination_id = n.id
         WHERE n.id = ?
@@ -433,6 +441,22 @@ async function selectNominationCandidate(req, res) {
       'CALL sp_select_candidate_from_nomination(?)',
       [nominationId]
     );
+
+    for (const recipientUserId of [
+      nomination.nominated_by_user_id,
+      nomination.agent_user_id,
+    ]) {
+      if (!recipientUserId || Number(recipientUserId) === Number(req.user.id)) continue;
+      await createNotification(connection, {
+        recipientUserId,
+        senderUserId: req.user.id,
+        notificationType: 'CANDIDATE_SELECTED_FROM_NOMINATION',
+        title: 'اختيار مرشح للدورة',
+        message: `اختير الموظف "${nomination.employee_name}" مرشحًا للدورة "${nomination.course_title}".`,
+        relatedEntityType: 'COURSE',
+        relatedEntityId: courseId,
+      });
+    }
 
     await connection.commit();
 

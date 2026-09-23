@@ -1,5 +1,6 @@
 import { protectPage } from '../shared/auth-guard.js';
 import { notify } from '../shared/notify.js';
+import { bindLiveFilters } from '../shared/live-filters.js';
 
 const state = {
   page: 1,
@@ -64,14 +65,19 @@ function setBadge(total) {
   }
 }
 
-function getNotificationIcon(category) {
-  const icons = {
-    COURSES: '📚',
-    FORMS: '📝',
-    GENERAL: '🔔',
-  };
+const categoryLabels = {
+  COURSES: 'الدورات والمهام',
+  FORMS: 'المستندات والنماذج',
+  GENERAL: 'إشعار عام',
+};
 
-  return icons[category] || '🔔';
+function categoryClass(category) {
+  const classes = {
+    COURSES: 'border-brand-gold/30 bg-brand-lightGold text-brand-darkGold',
+    FORMS: 'border-blue-100 bg-blue-50 text-blue-700',
+    GENERAL: 'border-slate-200 bg-slate-100 text-slate-600',
+  };
+  return classes[category] || classes.GENERAL;
 }
 
 function renderNotifications(notifications) {
@@ -89,38 +95,25 @@ function renderNotifications(notifications) {
   container.innerHTML = notifications.map((notification) => `
     <article
       data-notification-id="${notification.id}"
-      class="notification-item cursor-pointer rounded-xl border p-4 transition hover:border-brand-gold ${
+      class="notification-item cursor-pointer rounded-xl border p-4 shadow-sm transition hover:border-brand-gold hover:shadow-md ${
         notification.is_read
           ? 'border-slate-200 bg-white'
-          : 'border-brand-gold/30 bg-brand-lightGold/30'
+          : 'border-brand-gold/40 bg-brand-lightGold/30'
       }"
     >
-      <div class="flex items-start gap-3">
-        <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white text-lg shadow-sm">
-          ${getNotificationIcon(notification.category)}
-        </div>
-
-        <div class="min-w-0 flex-1">
-          <div class="flex flex-wrap items-center justify-between gap-2">
-            <h4 class="text-xs font-bold text-slate-900">
-              ${escapeHtml(notification.title)}
-            </h4>
-
-            ${
-              !notification.is_read
-                ? '<span class="rounded-full bg-brand-gold px-2 py-0.5 text-[9px] font-bold text-white">جديد</span>'
-                : ''
-            }
+      <div class="flex items-start justify-between gap-4">
+        <div class="flex min-w-0 items-start gap-3">
+          <span class="mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${notification.is_read ? 'bg-slate-300' : 'bg-brand-gold'}"></span>
+          <div>
+            <div class="flex flex-wrap items-center gap-2">
+              <span class="rounded-full border px-2.5 py-1 text-[10px] font-bold ${categoryClass(notification.category)}">${escapeHtml(categoryLabels[notification.category] || categoryLabels.GENERAL)}</span>
+              ${notification.is_read ? '' : '<span class="rounded-full bg-brand-navy px-2 py-1 text-[10px] font-bold text-white">جديد</span>'}
+            </div>
+            <h3 class="mt-3 text-sm font-bold text-slate-900">${escapeHtml(notification.title)}</h3>
+            <p class="mt-1.5 text-xs leading-6 text-slate-600">${escapeHtml(notification.message)}</p>
           </div>
-
-          <p class="mt-2 text-xs leading-6 text-slate-600">
-            ${escapeHtml(notification.message)}
-          </p>
-
-          <p class="mt-2 text-[10px] text-slate-400">
-            ${formatDateTime(notification.created_at)}
-          </p>
         </div>
+        <span class="shrink-0 text-[10px] text-slate-400">${formatDateTime(notification.created_at)}</span>
       </div>
     </article>
   `).join('');
@@ -196,19 +189,15 @@ async function loadNotifications() {
 async function initialize() {
   const user = await protectPage(['EMPLOYEE']);
   if (!user) return;
+  bindLiveFilters('main', () => {
+    state.page = 1;
+    loadNotifications();
+  });
 
   document.querySelector('#currentUserName').textContent =
     user.fullName || user.full_name || user.username || 'الموظف';
 
   document.querySelector('#logoutButton').addEventListener('click', logout);
-
-  document.querySelector('#applyNotificationsFiltersButton').addEventListener(
-    'click',
-    () => {
-      state.page = 1;
-      loadNotifications();
-    }
-  );
 
   document.querySelector('#clearNotificationFiltersButton').addEventListener(
     'click',

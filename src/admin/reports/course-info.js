@@ -1,6 +1,6 @@
 import { protectPage } from '../../shared/auth-guard.js';
 import {
-  api, getQuery, escapeHtml, formatDate, candidateStatusText,
+  api, getQuery, escapeHtml, formatDate, candidateStatusText, courseStatusText,
 } from '../manage-courses/course-api.js';
 
 const courseId = getQuery('id');
@@ -78,11 +78,7 @@ async function initialize() {
     document.querySelector('#courseTypeBadge').textContent =
       course.course_type === 'MISSION' ? 'مهمة / بعثة' : 'دورة تدريبية';
 
-    document.querySelector('#courseStatusBadge').textContent =
-      course.status === 'ARCHIVED' ? 'مؤرشفة'
-        : course.status === 'COMPLETED' ? 'مكتملة'
-          : course.status === 'CANCELLED' ? 'ملغاة'
-            : course.status;
+    document.querySelector('#courseStatusBadge').textContent = courseStatusText(course.status);
 
     if (course.status === 'COMPLETED') {
       const link = document.querySelector('#archiveCompletedCourseLink');

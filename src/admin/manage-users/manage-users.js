@@ -1,4 +1,5 @@
 import { protectPage } from '/src/shared/auth-guard.js';
+import { bindLiveFilters } from '/src/shared/live-filters.js';
 
 const state = {
   page: 1,
@@ -16,14 +17,14 @@ function escapeHtml(value = '') {
 
 function roleLabel(role) {
   const roles = {
-    SUPER_ADMIN: 'Super Admin',
+    SUPER_ADMIN: 'المسؤول الشامل',
     COURSE_MANAGER: 'مدير دورة',
     AGENT: 'وكيل قطاع',
     DEPARTMENT_MANAGER: 'مدير قسم',
     EMPLOYEE: 'موظف',
   };
 
-  return roles[role] || role;
+  return roles[role] || 'دور غير معروف';
 }
 
 function getAssignmentText(user) {
@@ -214,6 +215,10 @@ async function init() {
   const user = await protectPage(['SUPER_ADMIN']);
 
   if (!user) return;
+  bindLiveFilters('#filtersForm', () => {
+    state.page = 1;
+    loadUsers();
+  });
 
   document.querySelector('#logoutButton').addEventListener('click', logout);
 

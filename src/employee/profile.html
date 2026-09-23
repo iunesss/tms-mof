@@ -85,15 +85,12 @@
         </p>
       </div>
 
-      <button id="openEditProfileButton" type="button" class="w-fit rounded-lg bg-brand-gold px-4 py-2.5 text-xs font-bold text-white shadow-sm transition hover:bg-brand-darkGold">
-        تعديل الملف الشخصي
-      </button>
     </section>
 
     <p id="profileMessage" class="hidden rounded-xl border px-4 py-3 text-xs font-semibold"></p>
 
-    <section class="grid gap-5 xl:grid-cols-12">
-      <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-4">
+    <section class="grid gap-5 xl:grid-cols-10">
+      <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-3">
         <div class="flex flex-col items-center text-center">
           <div class="flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-lightGold text-3xl text-brand-darkGold">
             👤
@@ -127,7 +124,7 @@
         </div>
       </article>
 
-      <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-8">
+      <article class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm xl:col-span-7">
         <div class="flex items-center justify-between border-b border-slate-200 pb-4">
           <div>
             <h3 class="text-sm font-bold text-slate-900">المعلومات الشخصية والوظيفية</h3>
@@ -150,22 +147,6 @@
       </article>
     </section>
 
-    <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-4">
-        <div>
-          <h3 class="text-sm font-bold text-slate-900">المستندات الشخصية</h3>
-          <p class="mt-0.5 text-xs text-slate-500">المستندات التي رفعتها في ملفك الشخصي.</p>
-        </div>
-
-        <button id="openEditProfileButtonDocuments" type="button" class="rounded-lg border border-brand-gold px-3 py-2 text-[11px] font-bold text-brand-darkGold hover:bg-brand-lightGold">
-          رفع أو تحديث جواز السفر
-        </button>
-      </div>
-
-      <div id="profileDocumentsList" class="mt-4 text-xs text-slate-500">
-        جارٍ تحميل المستندات...
-      </div>
-    </section>
   </main>
 
   <div id="editProfileModal" class="fixed inset-0 z-[60] hidden items-center justify-center overflow-y-auto bg-slate-950/60 p-4">

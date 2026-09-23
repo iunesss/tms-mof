@@ -145,8 +145,9 @@
             المهمة لا تمر بمسار الوكيل أو الترشيحات الإدارية؛ مدير الدورة يختار الموظف مباشرة.
           </p>
         </div>
-
-        
+        <button id="openDirectCandidateModalButton" type="button" class="rounded-lg bg-brand-gold px-4 py-2 text-xs font-bold text-white transition hover:bg-brand-darkGold">
+          إضافة مرشح جديد
+        </button>
       </div>
     </section>
 
@@ -172,22 +173,20 @@
         جارٍ تحميل المرفقات...
       </div>
     </section>
+
+    <section class="rounded-xl border border-slate-200 bg-white shadow-sm">
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h3 class="text-sm font-bold text-slate-900">استمارات المرشحين المطلوبة</h3>
+        <p class="mt-1 text-[11px] text-slate-500">
+          يحمّلها المرشح ويعبئها ثم يرفع نسخة ممسوحة للمراجعة.
+        </p>
+      </div>
+
+      <div id="courseFormsList" class="p-5 text-xs text-slate-500">
+        جارٍ تحميل الاستمارات...
+      </div>
+    </section>
   </main>
-<section class="rounded-xl border border-slate-200 bg-white shadow-sm">
-  <div class="border-b border-slate-200 px-5 py-4">
-    <h3 class="text-sm font-bold text-slate-900">
-      استمارات المرشحين المطلوبة
-    </h3>
-
-    <p class="mt-1 text-[11px] text-slate-500">
-      يحمّلها المرشح ويعبئها ثم يرفع نسخة ممسوحة للمراجعة.
-    </p>
-  </div>
-
-  <div id="courseFormsList" class="p-5 text-xs text-slate-500">
-    جارٍ تحميل الاستمارات...
-  </div>
-</section>
   <!-- نافذة إضافة مرشح مباشر للمهمة -->
   <div id="directCandidateModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-950/60 p-4">
     <div class="w-full max-w-md rounded-xl bg-white p-5 shadow-xl">

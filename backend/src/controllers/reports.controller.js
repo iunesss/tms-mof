@@ -1,4 +1,5 @@
 const pool = require('../config/database');
+const { attachFinalReports } = require('../repositories/course-reports.repository');
 
 function sendError(res, status, message) {
   return res.status(status).json({ message });
@@ -148,10 +149,8 @@ async function getArchivedCourses(req, res) {
     const status = String(query.status || '').trim();
     const year = Number(query.year);
 
-    const conditions = [
-      `c.deleted_at IS NULL`,
-      `c.status IN ('COMPLETED', 'ARCHIVED', 'CANCELLED')`,
-    ];
+    // سجل الإدارة شامل؛ بخلاف سجلات الموظف والقسم والقطاع المقيدة بالدورات المنتهية.
+    const conditions = [`c.deleted_at IS NULL`];
 
     const values = [];
 
@@ -175,11 +174,18 @@ async function getArchivedCourses(req, res) {
       values.push(courseType);
     }
 
-    if (
-      status === 'COMPLETED' ||
-      status === 'ARCHIVED' ||
-      status === 'CANCELLED'
-    ) {
+    const allowedStatuses = [
+      'DRAFT',
+      'OPEN_FOR_NOMINATION',
+      'NOMINATION_CLOSED',
+      'CANDIDATE_PROCESSING',
+      'ACTIVE',
+      'COMPLETED',
+      'ARCHIVED',
+      'CANCELLED',
+    ];
+
+    if (allowedStatuses.includes(status)) {
       conditions.push('c.status = ?');
       values.push(status);
     }
@@ -247,7 +253,6 @@ async function getArchivedCourses(req, res) {
         FROM courses
         WHERE deleted_at IS NULL
           AND start_date IS NOT NULL
-          AND status IN ('COMPLETED', 'ARCHIVED', 'CANCELLED')
         ORDER BY year DESC
       `
     );
@@ -255,7 +260,7 @@ async function getArchivedCourses(req, res) {
     const total = Number(countResult.total);
 
     return res.json({
-      courses,
+      courses: await attachFinalReports(pool, courses),
       years: years.map((item) => item.year).filter(Boolean),
       pagination: {
         page,

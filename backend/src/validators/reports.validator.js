@@ -15,7 +15,17 @@ const auditLogsQuerySchema = z.object({
 const archiveQuerySchema = z.object({
   page, limit, search,
   courseType: z.enum(['TRAINING', 'MISSION', '']).optional(),
-  status: z.enum(['COMPLETED', 'ARCHIVED', 'CANCELLED', '']).optional(),
+  status: z.enum([
+    'DRAFT',
+    'OPEN_FOR_NOMINATION',
+    'NOMINATION_CLOSED',
+    'CANDIDATE_PROCESSING',
+    'ACTIVE',
+    'COMPLETED',
+    'ARCHIVED',
+    'CANCELLED',
+    '',
+  ]).optional(),
   year: optional(z.coerce.number().int().min(2001).max(2100)),
 });
 

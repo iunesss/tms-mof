@@ -1,5 +1,9 @@
 const setup = require('./admin-setup');
 const { ACTIVE_STATUSES, assertCourseTransition } = require('./course-lifecycle');
+const {
+  notifyCourseManagers,
+  notifyCourseStakeholders,
+} = require('../../utils/notifications');
 const { fs, crypto, pool, writeAuditLog, createNotification, getActorId, sendError,
   parseJson, toFileUrl, normalizeOriginalName, toUiStatus, toDatabaseStatus,
   generateCourseNumber, saveUploadedFiles, syncCourseForms,
@@ -12,7 +16,7 @@ async function saveFinalReport(connection, file, courseId, actorUserId) {
   const [storedFile] = await connection.query(
     `INSERT INTO files (storage_key, original_name, mime_type, size_bytes, checksum, uploaded_by_user_id)
      VALUES (?, ?, ?, ?, ?, ?)`,
-    [`courses/${file.filename}`, normalizeOriginalName(file.originalname), file.mimetype,
+    [`reports/${file.filename}`, normalizeOriginalName(file.originalname), file.mimetype,
       file.size, checksum, actorUserId]
   );
   await connection.query(
@@ -22,12 +26,42 @@ async function saveFinalReport(connection, file, courseId, actorUserId) {
   );
 }
 
+const COURSE_STATUS_LABELS = {
+  DRAFT: 'مسودة', OPEN_FOR_NOMINATION: 'مفتوحة للترشيح',
+  NOMINATION_CLOSED: 'أُغلق الترشيح', CANDIDATE_PROCESSING: 'معالجة المرشحين',
+  ACTIVE: 'نشطة', COMPLETED: 'مكتملة', ARCHIVED: 'مؤرشفة', CANCELLED: 'ملغاة',
+};
+
+async function notifyStatusChange(connection, course, nextStatus, actorUserId) {
+  if (course.status === nextStatus) return;
+  const notification = {
+    senderUserId: actorUserId,
+    notificationType: 'COURSE_STATUS_CHANGED',
+    title: 'تحديث حالة الدورة',
+    message: `تغيرت حالة الدورة "${course.title}" من ${COURSE_STATUS_LABELS[course.status] || course.status} إلى ${COURSE_STATUS_LABELS[nextStatus] || nextStatus}.`,
+    relatedEntityType: 'COURSE',
+    relatedEntityId: Number(course.id),
+  };
+  await notifyCourseStakeholders(connection, Number(course.id), notification, {
+    // فتح الترشيح له دعوة تفصيلية مستقلة لمدير القسم.
+    excludeDepartmentManagers: nextStatus === 'OPEN_FOR_NOMINATION',
+    // تفعيل المهمة له إشعار اختيار مستقل للموظف.
+    excludeCandidates:
+      course.course_type === 'MISSION' && nextStatus === 'CANDIDATE_PROCESSING',
+  });
+  await notifyCourseManagers(connection, notification);
+}
+
 /** قراءة الدورات وإنشاؤها وتعديلها؛ عمليات المرشحين مفصولة في admin-candidates.js. */
 async function listCourses(req, res) {
   try {
     const { search = '', type = '', status = '' } = req.query;
 
-    const conditions = ['c.deleted_at IS NULL'];
+    // القائمة العامة للدورات النشطة؛ الملغاة والمؤرشفة في الأرشيف وحده.
+    const conditions = [
+      'c.deleted_at IS NULL',
+      "c.status NOT IN ('ARCHIVED', 'CANCELLED')",
+    ];
     const values = [];
 
     if (search) {
@@ -506,6 +540,7 @@ async function updateCourse(req, res) {
         beforeData: { status: existingCourse.status },
         afterData: { status: 'ARCHIVED', report: finalReport.filename },
       });
+      await notifyStatusChange(connection, existingCourse, 'ARCHIVED', actorUserId);
       await connection.commit();
       return res.json({ message: 'تم رفع التقرير النهائي وأرشفة الدورة بنجاح.' });
     }
@@ -689,6 +724,7 @@ await syncCourseForms(
           actorUserId,
         ]
       );
+      await notifyStatusChange(connection, existingCourse, dbStatus, actorUserId);
     }
 
     await writeAuditLog(connection, {

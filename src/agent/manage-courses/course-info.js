@@ -1,4 +1,6 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { renderFinalReport } from '../../shared/final-report.js';
+import { attachmentTypeText } from '../../shared/status-labels.js';
 
 import {
   api,
@@ -10,6 +12,7 @@ import {
 } from '../agent-api.js';
 
 const courseId = getQuery('id');
+const fromArchive = getQuery('from') === 'archive';
 
 let nominations = [];
 
@@ -70,6 +73,12 @@ document.querySelector('#rejectNominationsButton').disabled =
 
 function renderNominations(items) {
   const body = document.querySelector('#nominationsTableBody');
+  const pendingItems = items.filter((item) => item.status === 'SUBMITTED');
+  const controls = document.querySelector('#nominationDecisionControls');
+  const selectAll = document.querySelector('#selectAllNominations');
+
+  controls.classList.toggle('hidden', pendingItems.length === 0);
+  selectAll.classList.toggle('hidden', pendingItems.length === 0);
 
   if (!items.length) {
     body.innerHTML = `
@@ -87,8 +96,9 @@ function renderNominations(items) {
     return;
   }
 
-  document.querySelector('#nominationsCountText').textContent =
-    `إجمالي الترشيحات: ${items.length}`;
+  document.querySelector('#nominationsCountText').textContent = pendingItems.length
+    ? `إجمالي الترشيحات: ${items.length} — بانتظار قرارك: ${pendingItems.length}`
+    : `تمت مراجعة جميع الترشيحات (${items.length})، ويمكنك متابعة نتائج قراراتك أدناه.`;
 
   body.innerHTML = items
     .map((nomination) => {
@@ -166,7 +176,7 @@ function renderAttachments(attachments) {
           rel="noopener"
           class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-brand-darkGold transition hover:bg-brand-lightGold"
         >
-          ${escapeHtml(attachment.attachment_type)}:
+          ${escapeHtml(attachmentTypeText(attachment.attachment_type))}:
           ${escapeHtml(attachment.original_name)}
         </a>
       `
@@ -177,6 +187,23 @@ function renderAttachments(attachments) {
 function fillCourseData(data) {
   const course = data.course || {};
   const allocation = data.sectorAllocation || {};
+  const isFinished = ['COMPLETED', 'ARCHIVED', 'CANCELLED'].includes(course.status);
+
+  // الأرشيف يعرض المشاركين النهائيين فقط، بلا إجراءات على الترشيحات القديمة.
+  document.querySelector('#agentNominationsSection').classList.toggle('hidden', isFinished);
+  document.querySelector('#agentParticipantsSection').classList.toggle('hidden', !isFinished);
+  if (isFinished) {
+    const participants = data.participants || [];
+    const list = document.querySelector('#agentParticipantsList');
+    list.innerHTML = participants.length
+      ? participants.map((person) => `
+          <div class="border-b border-slate-100 py-3 last:border-0">
+            <span class="font-bold">${escapeHtml(person.full_name)}</span>
+            <span class="mr-3">${escapeHtml(person.employee_number || '—')}</span>
+            <span class="mr-3">${escapeHtml(person.department_name)}</span>
+          </div>`).join('')
+      : 'لا يوجد موظفون مشاركون من قطاعك في هذه الدورة.';
+  }
 
   setText('#courseTitle', course.title);
   setText('#courseNumber', course.course_no || 'بدون رقم');
@@ -214,6 +241,7 @@ function fillCourseData(data) {
 
   renderNominations(nominations);
   renderAttachments(data.attachments || []);
+  renderFinalReport(data.final_report, course.status);
 }
 
 function getSelectedNominationIds() {
@@ -326,6 +354,13 @@ async function initialize() {
   if (!courseId) {
     window.location.replace('./main-courses.html');
     return;
+  }
+
+  if (fromArchive) {
+    for (const selector of ['#backToCoursesLogo', '#backToCoursesButton']) {
+      document.querySelector(selector).href = './archive.html';
+    }
+    document.querySelector('#backToCoursesButton').textContent = 'العودة إلى الأرشيف';
   }
 
   document

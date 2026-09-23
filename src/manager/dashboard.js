@@ -1,4 +1,5 @@
 import { protectPage } from '../shared/auth-guard.js';
+import { courseStatusText } from '../shared/status-labels.js';
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -17,21 +18,6 @@ function formatDate(value) {
     month: 'short',
     day: 'numeric',
   }).format(new Date(value));
-}
-
-function courseStatusText(status) {
-  const statuses = {
-    DRAFT: 'مسودة',
-    OPEN_FOR_NOMINATION: 'مفتوحة للترشيح',
-    NOMINATION_CLOSED: 'أُغلق الترشيح',
-    CANDIDATE_PROCESSING: 'قيد معالجة المرشحين',
-    ACTIVE: 'نشطة',
-    COMPLETED: 'مكتملة',
-    ARCHIVED: 'مؤرشفة',
-    CANCELLED: 'ملغاة',
-  };
-
-  return statuses[status] || status || '—';
 }
 
 function courseTypeText(type) {
@@ -106,7 +92,7 @@ function renderCourses(courses) {
     .map(
       (course) => `
         <tr class="transition hover:bg-slate-50">
-          <td class="px-5 py-3">
+          <td class="px-4 py-2">
             <p class="font-bold text-slate-800">
               ${escapeHtml(course.title)}
             </p>
@@ -116,21 +102,21 @@ function renderCourses(courses) {
             </p>
           </td>
 
-          <td class="px-5 py-3 text-slate-600">
+          <td class="px-4 py-2 text-slate-600">
             ${courseTypeText(course.course_type)}
           </td>
 
-          <td class="px-5 py-3">
+          <td class="px-4 py-2">
             <span class="rounded-lg px-2 py-1 text-[10px] font-bold ${statusClass(course.status)}">
               ${courseStatusText(course.status)}
             </span>
           </td>
 
-          <td class="px-5 py-3 font-bold text-slate-700">
+          <td class="px-4 py-2 font-bold text-slate-700">
             ${Number(course.department_nominations_count || 0)}
           </td>
 
-          <td class="px-5 py-3">
+          <td class="px-4 py-2">
             <a
               href="./manage-courses/course-info.html?id=${encodeURIComponent(course.id)}"
               class="text-[11px] font-bold text-brand-darkGold hover:underline"
@@ -156,10 +142,10 @@ function renderNotifications(notifications) {
     return;
   }
 
-  container.innerHTML = notifications
+  container.innerHTML = notifications.slice(0, 3)
     .map(
       (notification) => `
-        <article class="rounded-lg border border-slate-100 bg-slate-50 p-3">
+        <article class="rounded-lg border border-slate-100 bg-slate-50 p-2">
           <div class="flex items-start gap-2">
             <span class="mt-1.5 h-2 w-2 shrink-0 rounded-full ${
               notification.is_read ? 'bg-slate-300' : 'bg-brand-gold'
@@ -170,7 +156,7 @@ function renderNotifications(notifications) {
                 ${escapeHtml(notification.title)}
               </p>
 
-              <p class="mt-1 line-clamp-2 text-[11px] leading-5 text-slate-500">
+              <p class="mt-1 line-clamp-1 text-[11px] leading-5 text-slate-500">
                 ${escapeHtml(notification.message)}
               </p>
 
@@ -222,7 +208,7 @@ async function loadDashboard() {
 
   setUnreadBadge(Number(summary.unreadNotifications || 0));
 
-  renderCourses(data.recentCourses || []);
+  renderCourses((data.recentCourses || []).slice(0, 3));
   renderNotifications(data.recentNotifications || []);
 }
 

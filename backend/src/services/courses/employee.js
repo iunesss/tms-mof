@@ -2,7 +2,9 @@ const fs = require('fs');
 const crypto = require('crypto');
 
 const pool = require('../../config/database');
+const { attachFinalReports } = require('../../repositories/course-reports.repository');
 const { writeAuditLog } = require('../../utils/audit');
+const { notifyCourseManagers } = require('../../utils/notifications');
 
 function sendError(res, status, message) {
   return res.status(status).json({ message });
@@ -154,6 +156,7 @@ async function listCourses(req, res, next) {
 async function getArchive(req, res, next) {
   try {
     const employeeUserId = req.user.id;
+    const search = String(req.query.search || '').trim();
 
     const [courses] = await pool.query(
       `
@@ -187,16 +190,17 @@ async function getArchive(req, res, next) {
           )
           AND c.deleted_at IS NULL
           AND c.status IN ('COMPLETED', 'ARCHIVED')
+          AND (? = '' OR c.title LIKE ? OR c.course_no LIKE ?)
 
         ORDER BY
           COALESCE(c.end_date, c.start_date) DESC,
           c.created_at DESC
       `,
-      [employeeUserId]
+      [employeeUserId, search, `%${search}%`, `%${search}%`]
     );
 
     return res.status(200).json({
-      courses,
+      courses: await attachFinalReports(pool, courses),
     });
   } catch (error) {
     next(error);
@@ -325,6 +329,7 @@ async function getCourse(req, res, next) {
     const [attachments] = attachmentsResult;
     const [forms] = formsResult;
     const [candidateAttachments] = candidateAttachmentsResult;
+    const [courseWithReport] = await attachFinalReports(pool, [{ id: courseId }]);
 
     return res.status(200).json({
       course: {
@@ -348,6 +353,8 @@ async function getCourse(req, res, next) {
         selected_at: candidate.selected_at,
         confirmed_at: candidate.confirmed_at,
       },
+
+      final_report: courseWithReport.final_report,
 
       attachments: attachments.map((attachment) => ({
         ...attachment,
@@ -405,6 +412,18 @@ async function submitForm(req, res) {
     if (!candidate) {
       throw new Error(
         'لا تملك صلاحية رفع استمارة لهذه الدورة أو أنها ليست دورة حالية.'
+      );
+    }
+
+    if (
+      ![
+        'SELECTED',
+        'DOCUMENTS_PENDING',
+        'DOCUMENTS_UNDER_REVIEW',
+      ].includes(candidate.candidate_status)
+    ) {
+      throw new Error(
+        'لا يمكن رفع استمارة جديدة بعد القبول المبدئي أو تأكيد المشاركة.'
       );
     }
 
@@ -554,6 +573,19 @@ async function submitForm(req, res) {
         version_no: nextVersionNo,
         status: nextStatus,
       },
+    });
+
+    await notifyCourseManagers(connection, {
+      senderUserId: employeeUserId,
+      notificationType: nextStatus === 'RESUBMITTED'
+        ? 'COURSE_FORM_RESUBMITTED'
+        : 'COURSE_FORM_SUBMITTED',
+      title: nextStatus === 'RESUBMITTED'
+        ? 'أُعيد رفع استمارة دورة'
+        : 'رُفعت استمارة دورة جديدة',
+      message: `رفع الموظف استمارة "${courseForm.title}" للدورة "${candidate.title}" وهي جاهزة للمراجعة.`,
+      relatedEntityType: 'CANDIDATE_FORM_SUBMISSION',
+      relatedEntityId: submissionId,
     });
 
     await connection.commit();

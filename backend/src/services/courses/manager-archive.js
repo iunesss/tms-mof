@@ -1,4 +1,5 @@
 /** سجل دورات القسم الحالي للمدير، للقراءة فقط. */
+const { attachFinalReports } = require('../../repositories/course-reports.repository');
 module.exports = function createManagerArchive({ pool, getManagerDepartment, sendError }) {
 async function getArchive(req, res) {
   try {
@@ -28,17 +29,29 @@ async function getArchive(req, res) {
 
     const conditions = [
       'c.deleted_at IS NULL',
-      'cda.department_id = ?',
-      `
-        c.status IN (
-          'COMPLETED',
-          'ARCHIVED',
-          'CANCELLED'
+      `(
+        EXISTS (
+          SELECT 1 FROM course_department_allocations allocation
+          WHERE allocation.course_id = c.id AND allocation.department_id = ?
         )
+        OR EXISTS (
+          SELECT 1
+          FROM candidates department_candidate
+          INNER JOIN candidate_snapshots department_snapshot
+            ON department_snapshot.candidate_id = department_candidate.id
+          WHERE department_candidate.course_id = c.id
+            AND CAST(JSON_UNQUOTE(JSON_EXTRACT(
+              department_snapshot.organization_snapshot,
+              '$.department_id'
+            )) AS UNSIGNED) = ?
+        )
+      )`,
+      `
+        c.status IN ('COMPLETED', 'ARCHIVED')
       `,
     ];
 
-    const values = [department.id];
+    const values = [department.id, department.id];
 
     if (search) {
       conditions.push(`
@@ -71,8 +84,6 @@ async function getArchive(req, res) {
       `
         SELECT COUNT(DISTINCT c.id) AS total
         FROM courses c
-        INNER JOIN course_department_allocations cda
-          ON cda.course_id = c.id
         WHERE ${whereClause}
       `,
       values
@@ -89,18 +100,27 @@ async function getArchive(req, res) {
           c.end_date,
           c.status,
 
-          COUNT(DISTINCT candidate.id) AS department_candidates_count
+          COUNT(DISTINCT CASE
+            WHEN candidate.status NOT IN ('REJECTED', 'WITHDRAWN', 'REMOVED', 'CANCELLED')
+              AND (
+                n.department_id = ?
+                OR CAST(JSON_UNQUOTE(JSON_EXTRACT(
+                  cs.organization_snapshot,
+                  '$.department_id'
+                )) AS UNSIGNED) = ?
+              )
+            THEN candidate.id
+          END) AS department_candidates_count
 
         FROM courses c
-        INNER JOIN course_department_allocations cda
-          ON cda.course_id = c.id
+        LEFT JOIN candidates candidate
+          ON candidate.course_id = c.id
 
         LEFT JOIN nominations n
-          ON n.course_id = c.id
-          AND n.department_id = cda.department_id
+          ON n.id = candidate.source_nomination_id
 
-        LEFT JOIN candidates candidate
-          ON candidate.source_nomination_id = n.id
+        LEFT JOIN candidate_snapshots cs
+          ON cs.candidate_id = candidate.id
 
         WHERE ${whereClause}
 
@@ -117,6 +137,8 @@ async function getArchive(req, res) {
         LIMIT ? OFFSET ?
       `,
       [
+        department.id,
+        department.id,
         ...values,
         limit,
         offset,
@@ -127,18 +149,28 @@ async function getArchive(req, res) {
       `
         SELECT DISTINCT YEAR(c.start_date) AS year
         FROM courses c
-        INNER JOIN course_department_allocations cda
-          ON cda.course_id = c.id
-        WHERE cda.department_id = ?
-          AND c.start_date IS NOT NULL
-          AND c.status IN (
-            'COMPLETED',
-            'ARCHIVED',
-            'CANCELLED'
+        WHERE (
+          EXISTS (
+            SELECT 1 FROM course_department_allocations allocation
+            WHERE allocation.course_id = c.id AND allocation.department_id = ?
           )
+          OR EXISTS (
+            SELECT 1
+            FROM candidates department_candidate
+            INNER JOIN candidate_snapshots department_snapshot
+              ON department_snapshot.candidate_id = department_candidate.id
+            WHERE department_candidate.course_id = c.id
+              AND CAST(JSON_UNQUOTE(JSON_EXTRACT(
+                department_snapshot.organization_snapshot,
+                '$.department_id'
+              )) AS UNSIGNED) = ?
+          )
+        )
+          AND c.start_date IS NOT NULL
+          AND c.status IN ('COMPLETED', 'ARCHIVED')
         ORDER BY year DESC
       `,
-      [department.id]
+      [department.id, department.id]
     );
 
     const total = Number(countRows[0]?.total || 0);
@@ -148,7 +180,7 @@ async function getArchive(req, res) {
         .map((row) => row.year)
         .filter(Boolean),
 
-      courses,
+      courses: await attachFinalReports(pool, courses),
 
       pagination: {
         page,

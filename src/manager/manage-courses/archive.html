@@ -72,53 +72,32 @@
     </section>
 
     <section class="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <input id="archiveSearch" type="search" placeholder="ابحث باسم الدورة أو رقمها" class="rounded-lg border border-slate-300 px-3.5 py-2.5 text-xs outline-none focus:border-brand-gold xl:col-span-2" />
-
-        <select id="archiveCourseType" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-brand-gold">
-          <option value="">كل الأنواع</option>
-          <option value="TRAINING">دورة تدريبية</option>
-          <option value="MISSION">مهمة</option>
-        </select>
-
-        <select id="archiveYear" class="rounded-lg border border-slate-300 bg-white px-3.5 py-2.5 text-xs outline-none focus:border-brand-gold">
-          <option value="">كل السنوات</option>
-        </select>
-
-        <div class="flex gap-2.5 xl:col-span-4">
-          <button id="searchArchiveButton" type="button" class="rounded-lg bg-brand-navy px-4 py-2 text-xs font-bold text-white">بحث</button>
-          <button id="clearArchiveFiltersButton" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600">إعادة ضبط</button>
-        </div>
-      </div>
+      <label for="archiveSearch" class="mb-2 block text-xs font-semibold text-slate-700">البحث في السجل</label>
+      <input id="archiveSearch" type="search" placeholder="ابحث باسم الدورة أو رقمها" class="w-full rounded-lg border border-slate-300 px-3 py-2.5 text-xs outline-none focus:border-brand-gold" />
     </section>
 
     <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 px-5 py-4">
-        <div>
-          <h3 class="text-sm font-bold text-slate-900">نتائج السجل</h3>
-          <p id="archivedCoursesTotal" class="mt-1 text-[11px] text-slate-500">جارٍ تحميل السجل...</p>
-        </div>
-
-        <p id="archivePageInfo" class="text-[11px] text-slate-500">—</p>
+      <div class="border-b border-slate-200 px-5 py-4">
+        <h3 class="text-sm font-bold text-slate-900">السجل</h3>
+        <p id="archiveCountText" class="mt-1 text-xs text-slate-500">جارٍ تحميل السجل...</p>
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[900px] text-right text-xs">
+        <table class="w-full min-w-[850px] text-right text-xs">
           <thead class="border-b border-slate-200 bg-slate-50 text-slate-500">
             <tr>
               <th class="px-5 py-3 font-medium">رقم الدورة</th>
               <th class="px-5 py-3 font-medium">العنوان</th>
               <th class="px-5 py-3 font-medium">النوع</th>
               <th class="px-5 py-3 font-medium">الفترة</th>
-              <th class="px-5 py-3 font-medium">مرشحو القسم</th>
               <th class="px-5 py-3 font-medium">الحالة</th>
               <th class="px-5 py-3 font-medium"></th>
             </tr>
           </thead>
 
-          <tbody id="archiveCoursesTableBody" class="divide-y divide-slate-100">
+          <tbody id="archiveTableBody" class="divide-y divide-slate-100">
             <tr>
-              <td colspan="7" class="px-5 py-10 text-center text-xs text-slate-400">
+              <td colspan="6" class="px-5 py-10 text-center text-xs text-slate-400">
                 جارٍ تحميل السجل...
               </td>
             </tr>
@@ -126,14 +105,6 @@
         </table>
       </div>
 
-      <div class="flex items-center justify-between border-t border-slate-200 px-5 py-3 text-xs">
-        <p id="archivePaginationText" class="text-slate-500">—</p>
-
-        <div class="flex gap-2">
-          <button id="previousArchivePageButton" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">السابق</button>
-          <button id="nextArchivePageButton" type="button" class="rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">التالي</button>
-        </div>
-      </div>
     </section>
   </main>
 

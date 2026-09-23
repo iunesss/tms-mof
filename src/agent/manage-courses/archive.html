@@ -102,8 +102,6 @@
         </select>
 
         <div class="flex gap-2.5 xl:col-span-4">
-          <button id="searchArchiveButton" type="button" class="rounded-lg bg-brand-navy px-4 py-2 text-xs font-bold text-white transition hover:bg-slate-700">بحث</button>
-
           <button id="clearArchiveFiltersButton" type="button" class="rounded-lg border border-slate-300 px-4 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50">
             إعادة ضبط
           </button>
@@ -122,14 +120,13 @@
       </div>
 
       <div class="overflow-x-auto">
-        <table class="w-full min-w-[900px] text-right text-xs">
+        <table class="w-full min-w-[850px] text-right text-xs">
           <thead class="border-b border-slate-200 bg-slate-50 text-slate-500">
             <tr>
               <th class="px-5 py-3 font-medium">رقم الدورة</th>
               <th class="px-5 py-3 font-medium">العنوان</th>
               <th class="px-5 py-3 font-medium">النوع</th>
               <th class="px-5 py-3 font-medium">الفترة</th>
-              <th class="px-5 py-3 font-medium">مرشحو القطاع</th>
               <th class="px-5 py-3 font-medium">الحالة</th>
               <th class="px-5 py-3 font-medium"></th>
             </tr>
@@ -137,7 +134,7 @@
 
           <tbody id="archiveCoursesTableBody" class="divide-y divide-slate-100">
             <tr>
-              <td colspan="7" class="px-5 py-10 text-center text-xs text-slate-400">
+              <td colspan="6" class="px-5 py-10 text-center text-xs text-slate-400">
                 جارٍ تحميل الأرشيف...
               </td>
             </tr>

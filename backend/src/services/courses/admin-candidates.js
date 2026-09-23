@@ -1,3 +1,6 @@
+const { assertCandidateDecision } = require('./candidate-lifecycle');
+const { notifyCourseManagers } = require('../../utils/notifications');
+
 /** اختيار المرشحين وحالاتهم؛ تستقبل الاعتمادات المشتركة من خدمة إدارة الدورات. */
 module.exports = function createCandidateOperations({
   fs, crypto, pool, writeAuditLog, createNotification, getActorId, sendError,
@@ -11,6 +14,7 @@ async function listCourseCandidates(req, res) {
       `
         SELECT
           c.id,
+          c.employee_user_id,
           c.status,
           c.selected_at,
           up.full_name,
@@ -96,6 +100,25 @@ async function addDirectCandidate(req, res) {
 
     if (!course || course.course_type !== 'MISSION') {
       throw new Error('الإضافة المباشرة للموظفين متاحة للمهمة فقط.');
+    }
+
+    if (['COMPLETED', 'ARCHIVED', 'CANCELLED'].includes(course.status)) {
+      throw new Error('لا يمكن إضافة مرشح إلى مهمة منتهية أو ملغاة.');
+    }
+
+    const [[candidateUsage]] = await connection.query(
+      `
+        SELECT COUNT(*) AS total
+        FROM candidates
+        WHERE course_id = ?
+          AND status NOT IN ('REJECTED', 'WITHDRAWN', 'REMOVED', 'CANCELLED')
+        FOR UPDATE
+      `,
+      [courseId]
+    );
+
+    if (Number(candidateUsage.total || 0) >= Number(course.total_seats || 0)) {
+      throw new Error('اكتمل عدد المقاعد المتاحة لهذه المهمة.');
     }
 
     const candidateId = await createMissionCandidate(connection, {
@@ -327,9 +350,10 @@ async function getCandidate(req, res) {
   }
 }
 
-async function ensureCandidateReadyForPreliminaryAcceptance(
+async function ensureCandidateReadyForAcceptance(
   connection,
-  candidateId
+  candidateId,
+  actionLabel
 ) {
   const [[candidate]] = await connection.query(
     `
@@ -382,7 +406,7 @@ async function ensureCandidateReadyForPreliminaryAcceptance(
       .join('، ');
 
     throw new Error(
-      `لا يمكن القبول المبدئي قبل اعتماد جميع الاستمارات الإلزامية: ${formNames}.`
+      `لا يمكن ${actionLabel} قبل اعتماد جميع الاستمارات الإلزامية: ${formNames}.`
     );
   }
 
@@ -415,7 +439,7 @@ async function ensureCandidateReadyForPreliminaryAcceptance(
 
   if (!passport) {
     throw new Error(
-      'لا يمكن القبول المبدئي قبل اعتماد جواز سفر المرشح.'
+      `لا يمكن ${actionLabel} قبل اعتماد جواز سفر المرشح.`
     );
   }
 }
@@ -449,15 +473,18 @@ async function updateCandidateStatus(req, res) {
       throw new Error('المرشح غير موجود.');
     }
 
+    assertCandidateDecision(candidate.status, status);
+
     /*
       القبول المبدئي مشروط باعتماد:
       - كل الاستمارات الإلزامية
       - جواز السفر الشخصي
     */
-    if (status === 'PRELIMINARILY_ACCEPTED') {
-      await ensureCandidateReadyForPreliminaryAcceptance(
+    if (status === 'PRELIMINARILY_ACCEPTED' || status === 'CONFIRMED') {
+      await ensureCandidateReadyForAcceptance(
         connection,
-        candidateId
+        candidateId,
+        status === 'CONFIRMED' ? 'تأكيد المرشح' : 'القبول المبدئي'
       );
     }
 
@@ -560,6 +587,39 @@ async function updateCandidateStatus(req, res) {
         notificationType: notification.type,
         title: notification.title,
         message: notification.message,
+        relatedEntityType: 'CANDIDATE',
+        relatedEntityId: candidateId,
+      });
+
+      if (candidate.source_nomination_id) {
+        const [[sourceNomination]] = await connection.query(
+          `SELECT nominated_by_user_id, agent_user_id
+           FROM nominations WHERE id = ?`,
+          [candidate.source_nomination_id]
+        );
+        const statusMessage = `تغيرت حالة المرشح في الدورة "${candidate.course_title}" إلى: ${notification.title}.`;
+        for (const recipientUserId of [
+          sourceNomination?.nominated_by_user_id,
+          sourceNomination?.agent_user_id,
+        ]) {
+          if (!recipientUserId || Number(recipientUserId) === Number(actorUserId)) continue;
+          await createNotification(connection, {
+            recipientUserId,
+            senderUserId: actorUserId,
+            notificationType: notification.type,
+            title: 'تحديث حالة مرشح',
+            message: statusMessage,
+            relatedEntityType: 'CANDIDATE',
+            relatedEntityId: candidateId,
+          });
+        }
+      }
+
+      await notifyCourseManagers(connection, {
+        senderUserId: actorUserId,
+        notificationType: notification.type,
+        title: 'تحديث حالة مرشح',
+        message: `تغيرت حالة مرشح في الدورة "${candidate.course_title}" إلى: ${notification.title}.`,
         relatedEntityType: 'CANDIDATE',
         relatedEntityId: candidateId,
       });

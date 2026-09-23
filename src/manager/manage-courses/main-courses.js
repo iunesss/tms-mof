@@ -1,6 +1,8 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
+import { courseStatusText } from '../../shared/status-labels.js';
 
-const state = { page: 1, limit: 9 };
+const state = { limit: 3 };
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -13,7 +15,6 @@ function escapeHtml(value = '') {
 
 function formatDate(value) {
   if (!value) return '—';
-
   return new Intl.DateTimeFormat('ar-YE', {
     year: 'numeric',
     month: 'short',
@@ -21,15 +22,14 @@ function formatDate(value) {
   }).format(new Date(value));
 }
 
-function courseStatusText(status) {
-  const statuses = {
-    OPEN_FOR_NOMINATION: 'مفتوحة للترشيح',
-    NOMINATION_CLOSED: 'أُغلق الترشيح',
-    CANDIDATE_PROCESSING: 'قيد معالجة المرشحين',
-    ACTIVE: 'نشطة',
+function statusClass(status) {
+  const classes = {
+    ACTIVE: 'bg-brand-lightGold text-brand-darkGold',
+    OPEN_FOR_NOMINATION: 'bg-brand-lightGold text-brand-darkGold',
+    NOMINATION_CLOSED: 'bg-amber-50 text-amber-700',
+    CANDIDATE_PROCESSING: 'bg-violet-50 text-violet-700',
   };
-
-  return statuses[status] || status || '—';
+  return classes[status] || 'bg-slate-100 text-slate-600';
 }
 
 async function api(url, options = {}) {
@@ -73,99 +73,46 @@ function renderCourses(courses) {
     return;
   }
 
-  grid.innerHTML = courses.map((course) => `
-    <article class="rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-sm">
-      <div class="flex items-center justify-between gap-3">
-        <span class="rounded-lg bg-brand-lightGold px-2.5 py-1 text-[11px] font-bold text-brand-darkGold">
-          ${course.course_type === 'MISSION' ? 'مهمة / بعثة' : 'دورة تدريبية'}
-        </span>
+  grid.innerHTML = courses.slice(0, 3).map((course) => {
+    const detailsUrl = `./course-info.html?id=${encodeURIComponent(course.id)}`;
 
-        <span class="rounded-lg bg-slate-100 px-2.5 py-1 text-[10px] font-bold text-slate-600">
-          ${courseStatusText(course.status)}
-        </span>
-      </div>
-
-      <h4 class="mt-5 text-sm font-bold text-slate-900">
-        ${escapeHtml(course.title)}
-      </h4>
-
-      <p class="mt-1 text-[11px] text-slate-500">
-        رقم الدورة: ${escapeHtml(course.course_no || '—')}
-      </p>
-
-      <p class="mt-3 line-clamp-2 text-xs leading-6 text-slate-500">
-        ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
-      </p>
-
-      <div class="mt-4 grid grid-cols-2 gap-3 border-y border-slate-100 py-3 text-[11px]">
-        <div>
-          <p class="text-slate-400">ترشيحات القسم</p>
-          <p class="mt-1 font-bold text-slate-800">
-            ${Number(course.department_nominations_count || 0)}
-          </p>
-        </div>
-
-        <div>
-          <p class="text-slate-400">حالة الإرسال</p>
-          <p class="mt-1 font-bold text-slate-800">
-            ${course.submission_locked ? 'تم الإرسال' : 'قابل للتعديل'}
-          </p>
-        </div>
-      </div>
-
-      <p class="mt-3 text-[11px] text-slate-500">
-        البداية: ${formatDate(course.start_date)}
-      </p>
-
-      <a
-        href="./course-info.html?id=${encodeURIComponent(course.id)}"
-        class="mt-4 block rounded-lg bg-brand-navy px-3 py-2 text-center text-[11px] font-bold text-white transition hover:bg-slate-700"
-      >
-        فتح تفاصيل الدورة
+    return `
+      <a href="${detailsUrl}"
+         class="group block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-md">
+        <article class="flex h-full flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between gap-3">
+              <span class="rounded-lg px-2.5 py-1 text-[11px] font-bold ${statusClass(course.status)}">
+                ${courseStatusText(course.status)}
+              </span>
+              <span class="text-[11px] text-slate-400">
+                ${Number(course.department_nominations_count || 0)} مرشح
+              </span>
+            </div>
+            <p class="mt-5 text-[11px] font-semibold text-brand-gold">
+              ${course.course_type === 'MISSION' ? 'مهمة' : 'دورة تدريبية'}
+            </p>
+            <h4 class="mt-1 text-sm font-bold text-slate-900 transition group-hover:text-brand-gold">
+              ${escapeHtml(course.title)}
+            </h4>
+            <p class="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">
+              ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
+            </p>
+          </div>
+          <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
+            <span class="text-[11px] text-slate-500">البدء: ${formatDate(course.start_date)}</span>
+            <span class="text-xs font-bold text-slate-800 transition group-hover:text-brand-gold">التفاصيل ←</span>
+          </div>
+        </article>
       </a>
-    </article>
-  `).join('');
+    `;
+  }).join('');
 }
 
-function renderPagination(pagination) {
-  const totalPages = pagination.totalPages || 1;
-  const element = document.querySelector('#coursesPagination');
-
-  element.innerHTML = `
-    <p class="text-slate-500">
-      صفحة ${pagination.page} من ${totalPages}
-      <span class="mr-2 text-[11px] text-slate-400">(${pagination.total} دورة)</span>
-    </p>
-
-    <div class="flex gap-2">
-      <button id="previousCoursesPageButton" type="button" ${pagination.page <= 1 ? 'disabled' : ''} class="rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">
-        السابق
-      </button>
-
-      <button id="nextCoursesPageButton" type="button" ${pagination.page >= totalPages ? 'disabled' : ''} class="rounded-lg border border-slate-300 px-3 py-2 text-[11px] font-bold text-slate-700 disabled:opacity-50">
-        التالي
-      </button>
-    </div>
-  `;
-
-  document.querySelector('#previousCoursesPageButton').onclick = () => {
-    if (state.page > 1) {
-      state.page -= 1;
-      loadCourses();
-    }
-  };
-
-  document.querySelector('#nextCoursesPageButton').onclick = () => {
-    if (state.page < totalPages) {
-      state.page += 1;
-      loadCourses();
-    }
-  };
-}
 
 async function loadCourses() {
   const query = new URLSearchParams({
-    page: String(state.page),
+    page: '1',
     limit: String(state.limit),
   });
 
@@ -190,12 +137,14 @@ async function loadCourses() {
     `إجمالي الدورات: ${pagination.total}`;
 
   renderCourses(courses);
-  renderPagination(pagination);
 }
 
 async function initialize() {
   const user = await protectPage(['DEPARTMENT_MANAGER']);
   if (!user) return;
+  bindLiveFilters('#coursesFiltersForm', () => {
+    loadCourses().catch(showError);
+  });
 
   setIdentity(user);
 
@@ -203,13 +152,11 @@ async function initialize() {
 
   document.querySelector('#coursesFiltersForm').onsubmit = (event) => {
     event.preventDefault();
-    state.page = 1;
     loadCourses().catch(showError);
   };
 
   document.querySelector('#resetCoursesFiltersButton').onclick = () => {
     document.querySelector('#coursesFiltersForm').reset();
-    state.page = 1;
     loadCourses().catch(showError);
   };
 

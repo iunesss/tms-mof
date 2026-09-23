@@ -80,8 +80,9 @@ async function serveAuthorizedFile(req, res, next) {
     const extension = path.extname(diskPath).toLowerCase();
     const mimeType = inlineTypes.get(extension);
     res.set('X-Content-Type-Options', 'nosniff');
-    // عزل الملف في بيئه
-    res.set('Content-Security-Policy', "sandbox; default-src 'none'");
+    // Chromium لا يعرض PDF إذا أُرسل مع CSP sandbox؛ الصور تبقى معزولة.
+    if (mimeType === 'application/pdf') res.removeHeader('Content-Security-Policy');
+    else res.set('Content-Security-Policy', "sandbox; default-src 'none'");
     res.type(mimeType || 'application/octet-stream');
     res.set('Content-Disposition', mimeType ? 'inline' : 'attachment');
     return res.sendFile(diskPath, { cacheControl: false, lastModified: false, dotfiles: 'deny' }, (error) => {

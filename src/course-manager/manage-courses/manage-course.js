@@ -1,4 +1,7 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { renderFinalReport } from '../../shared/final-report.js';
+import { attachmentTypeText } from '../../shared/status-labels.js';
+import { setupDirectCandidate } from '../../shared/direct-candidate.js';
 import {
   api,
   getQuery,
@@ -122,7 +125,7 @@ function renderAttachments(attachments) {
       target="_blank"
       class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-brand-darkGold transition hover:bg-brand-lightGold"
     >
-      ${escapeHtml(attachment.attachment_type)}:
+      ${escapeHtml(attachmentTypeText(attachment.attachment_type))}:
       ${escapeHtml(attachment.original_name)}
     </a>
   `).join('');
@@ -237,7 +240,14 @@ renderCourseForms(course.forms || []);
 
 renderApprovedNominations(approvedNominations);
     renderAttachments(course.attachments || []);
+    renderFinalReport(course.final_report, course.status);
     configureMissionSection(course);
+    setupDirectCandidate({
+      course,
+      candidates,
+      api,
+      onError: showPageError,
+    });
   } catch (error) {
     console.error('Course details error:', error);
 

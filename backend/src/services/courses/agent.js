@@ -1,4 +1,6 @@
 const pool = require('../../config/database');
+const { attachFinalReports } = require('../../repositories/course-reports.repository');
+const { notifyCourseManagers } = require('../../utils/notifications');
 const {
   getAgentSector,
 } = require('../../repositories/assignments.repository');
@@ -214,6 +216,7 @@ async function getCourse(req, res) {
       [allocationRows],
       [nominations],
       [attachments],
+      [participants],
     ] = await Promise.all([
       pool.execute(
         `
@@ -293,11 +296,29 @@ async function getCourse(req, res) {
         `,
         [courseId]
       ),
+      pool.execute(
+        `SELECT candidate.id, candidate.status, profile.full_name,
+                profile.employee_number, department.name AS department_name
+         FROM candidates candidate
+         JOIN user_profiles profile ON profile.user_id = candidate.employee_user_id
+         LEFT JOIN nominations source_nomination ON source_nomination.id = candidate.source_nomination_id
+         LEFT JOIN candidate_snapshots snapshot ON snapshot.candidate_id = candidate.id
+         JOIN departments department ON department.id = COALESCE(
+           source_nomination.department_id,
+           CAST(JSON_UNQUOTE(JSON_EXTRACT(snapshot.organization_snapshot, '$.department_id')) AS UNSIGNED)
+         )
+         WHERE candidate.course_id = ? AND department.sector_id = ?
+           AND candidate.status IN ('CONFIRMED', 'PARTICIPATING', 'COMPLETED')
+         ORDER BY profile.full_name`,
+        [courseId, sector.id]
+      ),
     ]);
 
+    const [courseWithReport] = await attachFinalReports(pool, [course]);
     return res.json({
       sector,
       course,
+      final_report: courseWithReport.final_report,
 
       sectorAllocation: {
         nomination_limit: Number(
@@ -309,7 +330,8 @@ async function getCourse(req, res) {
         ),
       },
 
-      nominations,
+      nominations: ['COMPLETED', 'ARCHIVED', 'CANCELLED'].includes(course.status) ? [] : nominations,
+      participants,
 
       attachments: attachments.map((attachment) => ({
         ...attachment,
@@ -348,11 +370,14 @@ async function decideNominations(req, res) {
   try {
     await connection.beginTransaction();
 
-    const { sector } = await ensureCourseInAgentSector(
+    const { sector, course } = await ensureCourseInAgentSector(
       connection,
       courseId,
       req.user.id
     );
+    if (['COMPLETED', 'ARCHIVED', 'CANCELLED'].includes(course.status)) {
+      throw new Error('لا يمكن مراجعة ترشيحات دورة منتهية أو ملغاة.');
+    }
 
     const placeholders = nominationIds.map(() => '?').join(',');
 
@@ -404,6 +429,18 @@ async function decideNominations(req, res) {
       );
     }
 
+    // الإجراء المخزن يبلغ مدير الدورة بكل اعتماد؛ نضيف الرفض هنا لأنه لا يبلغه به.
+    if (!isConfirmed) {
+      await notifyCourseManagers(connection, {
+        senderUserId: req.user.id,
+        notificationType: 'NOMINATIONS_AGENT_REJECTED',
+        title: 'رفض الوكيل بعض الترشيحات',
+        message: `رفض وكيل قطاع "${sector.name}" ${nominations.length} ترشيحًا في الدورة "${course.title}". السبب: ${reason}`,
+        relatedEntityType: 'COURSE',
+        relatedEntityId: courseId,
+      });
+    }
+
     await connection.commit();
 
     return res.json({
@@ -452,7 +489,7 @@ async function getArchive(req, res) {
     const conditions = [
       'c.deleted_at IS NULL',
       'cst.sector_id = ?',
-      `c.status IN ('COMPLETED', 'ARCHIVED', 'CANCELLED')`,
+      `c.status IN ('COMPLETED', 'ARCHIVED')`,
     ];
 
     const values = [sector.id];
@@ -506,7 +543,18 @@ async function getArchive(req, res) {
           c.end_date,
           c.status,
 
-          COUNT(DISTINCT candidate.id) AS sector_candidates_count
+          COUNT(DISTINCT CASE
+            WHEN candidate.status IN ('CONFIRMED', 'PARTICIPATING', 'COMPLETED')
+              AND EXISTS (
+                SELECT 1 FROM departments candidate_department
+                WHERE candidate_department.sector_id = cst.sector_id
+                  AND candidate_department.id = COALESCE(
+                    source_nomination.department_id,
+                    CAST(JSON_UNQUOTE(JSON_EXTRACT(snapshots.organization_snapshot, '$.department_id')) AS UNSIGNED)
+                  )
+              )
+            THEN candidate.id
+          END) AS sector_candidates_count
 
         FROM courses c
         INNER JOIN course_sector_targets cst
@@ -514,6 +562,9 @@ async function getArchive(req, res) {
 
         LEFT JOIN candidates candidate
           ON candidate.course_id = c.id
+
+        LEFT JOIN nominations source_nomination
+          ON source_nomination.id = candidate.source_nomination_id
 
         LEFT JOIN candidate_snapshots snapshots
           ON snapshots.candidate_id = candidate.id
@@ -543,11 +594,7 @@ async function getArchive(req, res) {
           ON cst.course_id = c.id
         WHERE cst.sector_id = ?
           AND c.start_date IS NOT NULL
-          AND c.status IN (
-            'COMPLETED',
-            'ARCHIVED',
-            'CANCELLED'
-          )
+          AND c.status IN ('COMPLETED', 'ARCHIVED')
         ORDER BY year DESC
       `,
       [sector.id]
@@ -560,7 +607,7 @@ async function getArchive(req, res) {
         .map((row) => row.year)
         .filter(Boolean),
 
-      courses,
+      courses: await attachFinalReports(pool, courses),
 
       pagination: {
         page,

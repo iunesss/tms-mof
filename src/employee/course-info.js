@@ -1,4 +1,6 @@
 import { protectPage } from '../shared/auth-guard.js';
+import { renderFinalReport } from '../shared/final-report.js';
+import { courseStatusText, candidateStatusText, formStatusText, attachmentTypeText } from '../shared/status-labels.js';
 
 const courseId = new URLSearchParams(window.location.search).get('id');
 
@@ -63,7 +65,7 @@ function renderAttachments(attachments) {
       rel="noopener"
       class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 text-xs font-semibold text-brand-darkGold"
     >
-      ${escapeHtml(attachment.attachment_type)}:
+      ${escapeHtml(attachmentTypeText(attachment.attachment_type))}:
       ${escapeHtml(attachment.original_name)}
     </a>
   `).join('');
@@ -80,12 +82,12 @@ function renderCandidateAttachments(attachments = []) {
   container.innerHTML = attachments.map((attachment) => `
     <a href="${escapeHtml(attachment.file_url)}" target="_blank" rel="noopener"
        class="ml-2 mb-2 inline-block rounded-lg bg-slate-50 px-3 py-2 font-semibold text-brand-darkGold">
-      ${escapeHtml(attachment.attachment_type)}: ${escapeHtml(attachment.original_name)}
+      ${escapeHtml(attachmentTypeText(attachment.attachment_type))}: ${escapeHtml(attachment.original_name)}
     </a>
   `).join('');
 }
 
-function renderForms(forms) {
+function renderForms(forms, canUpload) {
   const container = document.querySelector('#courseFormsList');
 
   if (!forms.length) {
@@ -106,7 +108,7 @@ function renderForms(forms) {
             ${Number(form.is_required) ? 'استمارة إلزامية' : 'استمارة اختيارية'}
           </p>
           <p class="mt-1 text-[11px] text-slate-500">
-  الحالة: ${form.submission_status || 'لم تُرفع بعد'}
+  الحالة: ${form.submission_status ? formStatusText(form.submission_status) : 'لم تُرفع بعد'}
 </p>
         </div>
 
@@ -127,7 +129,7 @@ function renderForms(forms) {
         </a>
       ` : ''}
 
-      <div class="mt-4 flex flex-col gap-2 sm:flex-row">
+      ${canUpload ? `<div class="mt-4 flex flex-col gap-2 sm:flex-row">
         <input
           id="formFile-${form.id}"
           type="file"
@@ -142,7 +144,7 @@ function renderForms(forms) {
         >
           رفع النسخة المعبأة
         </button>
-      </div>
+      </div>` : ''}
     </article>
   `).join('');
 
@@ -220,14 +222,31 @@ function fillPage(data) {
       : 'دورة تدريبية';
 
   document.querySelector('#courseStatusBadge').textContent =
-    course.status || '—';
+    courseStatusText(course.status);
 
   document.querySelector('#candidateStatus').textContent =
-    candidate.status || '—';
+    candidateStatusText(candidate.status);
 
-  renderForms(data.forms || []);
+  const closedCourseStatuses = ['COMPLETED', 'ARCHIVED', 'CANCELLED'];
+  const acceptedCandidateStatuses = [
+    'PRELIMINARILY_ACCEPTED',
+    'CONFIRMED',
+    'PARTICIPATING',
+    'COMPLETED',
+  ];
+  const canUploadForms =
+    !closedCourseStatuses.includes(course.status) &&
+    !acceptedCandidateStatuses.includes(candidate.status);
+
+  document.querySelector('#formsSectionDescription').textContent =
+    canUploadForms
+      ? 'حمّل الاستمارة، عبئها، ثم ارفع النسخة المعبأة.'
+      : 'يمكنك تحميل الاستمارة وعرض النسخة التي رفعتها سابقًا.';
+
+  renderForms(data.forms || [], canUploadForms);
   renderCandidateAttachments(data.candidateAttachments || []);
   renderAttachments(data.attachments || []);
+  renderFinalReport(data.final_report, course.status);
 }
 
 /** يجدد بيانات الدورة وحالة الاستمارات بعد أي رفع ناجح. */

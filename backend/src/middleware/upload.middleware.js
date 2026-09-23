@@ -26,7 +26,8 @@ function createUpload(directory, acceptedTypes) {
   return multer({
     storage: multer.diskStorage({
       destination(req, file, callback) {
-        const destination = path.join(UPLOAD_ROOT, directory);
+        // التقرير النهائي مفصول عن مرفقات الدورة، مع بقاء الرفع عبر middleware واحد.
+        const destination = path.join(UPLOAD_ROOT, file.fieldname === 'finalReport' ? 'reports' : directory);
         fs.mkdir(destination, { recursive: true }, (error) => callback(error, destination));
       },
       // تشفير اسم الملف

@@ -1,4 +1,6 @@
 /** يرسل ترشيحات القسم إلى الوكيل المعيّن ضمن transaction واحدة. */
+const { notifyCourseManagers } = require('../../utils/notifications');
+
 module.exports = function createManagerNominations({ pool, writeAuditLog, createNotification, sendError, ensureCourseInManagerDepartment }) {
 async function submitNominations(req, res) {
   const courseId = Number(req.params.courseId);
@@ -38,32 +40,37 @@ async function submitNominations(req, res) {
       );
     }
 
-    const [[existingSubmission]] = await connection.execute(
+    const [[deadlineState]] = await connection.execute(
       `
-        SELECT id
-        FROM nominations
-        WHERE course_id = ?
-          AND department_id = ?
-          AND nominated_by_user_id = ?
-        LIMIT 1
-        FOR UPDATE
+        SELECT CURDATE() > DATE(?) AS deadline_passed
       `,
-      [
-        courseId,
-        department.id,
-        req.user.id,
-      ]
+      [course.nomination_deadline]
     );
 
-    if (existingSubmission) {
+    if (!course.nomination_deadline || deadlineState.deadline_passed) {
       throw new Error(
-        'تم إرسال ترشيحات القسم مسبقًا، ولا يمكن تعديلها الآن.'
+        'انتهى الموعد المحدد للترشيح في هذه الدورة.'
       );
     }
 
-    if (employeeUserIds.length > Number(course.nomination_limit)) {
+    const [[nominationUsage]] = await connection.execute(
+      `
+        SELECT COUNT(*) AS total
+        FROM nominations
+        WHERE course_id = ?
+          AND department_id = ?
+          AND status NOT IN ('AGENT_REJECTED', 'WITHDRAWN')
+        FOR UPDATE
+      `,
+      [courseId, department.id]
+    );
+
+    const usedNominations = Number(nominationUsage.total || 0);
+    const nominationLimit = Number(course.nomination_limit || 0);
+
+    if (usedNominations + employeeUserIds.length > nominationLimit) {
       throw new Error(
-        `لا يمكن تجاوز حد ترشيحات القسم: ${course.nomination_limit}.`
+        `المتبقي لقسمك ${Math.max(nominationLimit - usedNominations, 0)} ترشيح فقط.`
       );
     }
 
@@ -170,6 +177,15 @@ VALUES (?, ?, ?, ?, ?, 'SUBMITTED')        `,
       senderUserId: req.user.id,
       notificationType: 'DEPARTMENT_NOMINATIONS_SUBMITTED',
       title: 'ترشيحات جديدة تحتاج مراجعة',
+      message: `أرسل مدير قسم "${department.name}" ${employeeUserIds.length} ترشيحًا للدورة: ${course.title}.`,
+      relatedEntityType: 'COURSE',
+      relatedEntityId: courseId,
+    });
+
+    await notifyCourseManagers(connection, {
+      senderUserId: req.user.id,
+      notificationType: 'NOMINATIONS_SUBMITTED_TO_AGENT',
+      title: 'أُرسلت ترشيحات جديدة للوكيل',
       message: `أرسل مدير قسم "${department.name}" ${employeeUserIds.length} ترشيحًا للدورة: ${course.title}.`,
       relatedEntityType: 'COURSE',
       relatedEntityId: courseId,

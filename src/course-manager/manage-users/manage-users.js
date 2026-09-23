@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
 
 const state = {
   page: 1,
@@ -21,7 +22,7 @@ function roleLabel(role) {
     EMPLOYEE: 'موظف',
   };
 
-  return roles[role] || role;
+  return roles[role] || 'دور غير معروف';
 }
 
 function getAssignmentText(user) {
@@ -257,6 +258,10 @@ async function init() {
   const user = await protectPage(['COURSE_MANAGER']);
 
   if (!user) return;
+  bindLiveFilters('#filtersForm', () => {
+    state.page = 1;
+    loadUsers();
+  });
 
   const currentUserName = document.querySelector('#currentUserName');
 

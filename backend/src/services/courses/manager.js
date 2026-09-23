@@ -1,4 +1,5 @@
 const pool = require('../../config/database');
+const { attachFinalReports } = require('../../repositories/course-reports.repository');
 
 const {
   getManagerDepartment,
@@ -355,13 +356,18 @@ async function getCourse(req, res) {
     );
 
     const isMission = course.course_type === 'MISSION';
+    const isClosedCourse = [
+      'COMPLETED',
+      'ARCHIVED',
+      'CANCELLED',
+    ].includes(course.status);
 
     const [
       allocationResult,
       nominationsResult,
       attachmentsResult,
-      courseFormsResult,
       selfCandidateResult,
+      selfNominationResult,
     ] = await Promise.all([
       pool.execute(
         `
@@ -373,7 +379,7 @@ async function getCourse(req, res) {
           LEFT JOIN nominations n
             ON n.course_id = cda.course_id
             AND n.department_id = cda.department_id
-            AND n.status NOT IN ('WITHDRAWN')
+            AND n.status NOT IN ('AGENT_REJECTED', 'WITHDRAWN')
 
           WHERE cda.course_id = ?
             AND cda.department_id = ?
@@ -387,7 +393,7 @@ async function getCourse(req, res) {
         في التدريب: ترشيحات مدير القسم.
         في المهمة: الموظفون الموجودون فعليًا في المهمة من نفس القسم.
       */
-      isMission
+      (isMission || isClosedCourse)
         ? pool.execute(
             `
               SELECT
@@ -406,6 +412,12 @@ async function getCourse(req, res) {
                 ON up.user_id = c.employee_user_id
 
               WHERE c.course_id = ?
+                AND c.status NOT IN (
+                  'REJECTED',
+                  'WITHDRAWN',
+                  'REMOVED',
+                  'CANCELLED'
+                )
                 AND CAST(
                   JSON_UNQUOTE(
                     JSON_EXTRACT(
@@ -470,59 +482,78 @@ async function getCourse(req, res) {
 
       pool.execute(
         `
-          SELECT
-            cf.id,
-            cf.title,
-            cf.is_required,
-            f.storage_key
-
-          FROM course_forms cf
-          INNER JOIN files f
-            ON f.id = cf.template_file_id
-
-          WHERE cf.course_id = ?
-            AND cf.deleted_at IS NULL
-            AND f.deleted_at IS NULL
-
-          ORDER BY cf.display_order, cf.created_at
+          SELECT id, status, selected_at, confirmed_at
+          FROM candidates
+          WHERE course_id = ?
+            AND employee_user_id = ?
+            AND status NOT IN ('REJECTED', 'WITHDRAWN', 'REMOVED', 'CANCELLED')
+          LIMIT 1
         `,
-        [courseId]
+        [courseId, req.user.id]
       ),
 
-      /*
-        هذا الفحص يخص التدريب فقط.
-        في المهمة لا نعرض قسم استمارات أو رفع ملفات لمدير القسم.
-      */
-      isMission
-        ? Promise.resolve([[{ self_candidate: 0 }]])
-        : pool.execute(
-            `
-              SELECT
-                EXISTS (
-                  SELECT 1
-                  FROM nominations n
-                  WHERE n.course_id = ?
-                    AND n.nominee_user_id = ?
-                    AND n.department_id = ?
-                    AND n.status NOT IN (
-                      'AGENT_REJECTED',
-                      'WITHDRAWN'
-                    )
-                ) AS self_candidate
-            `,
-            [
-              courseId,
-              req.user.id,
-              department.id,
-            ]
-          ),
+      pool.execute(
+        `
+          SELECT id, status
+          FROM nominations
+          WHERE course_id = ?
+            AND nominee_user_id = ?
+            AND department_id = ?
+            AND status NOT IN ('AGENT_REJECTED', 'WITHDRAWN')
+          ORDER BY id DESC
+          LIMIT 1
+        `,
+        [courseId, req.user.id, department.id]
+      ),
     ]);
 
     const [allocationRows] = allocationResult;
     const [nominations] = nominationsResult;
     const [attachments] = attachmentsResult;
-    const [courseForms] = courseFormsResult;
     const [selfCandidateRows] = selfCandidateResult;
+    const [selfNominationRows] = selfNominationResult;
+    const selfCandidate = selfCandidateRows[0] || null;
+    const selfNomination = selfNominationRows[0] || null;
+
+    let selfForms = [];
+    let selfCandidateAttachments = [];
+
+    if (selfCandidate) {
+      [selfForms] = await pool.execute(
+        `
+          SELECT cf.id, cf.title, cf.is_required,
+                 template_file.storage_key AS template_storage_key,
+                 cfs.status AS submission_status,
+                 submitted_file.storage_key AS submitted_storage_key
+          FROM course_forms cf
+          INNER JOIN files template_file ON template_file.id = cf.template_file_id
+          LEFT JOIN candidate_form_submissions cfs
+            ON cfs.course_form_id = cf.id AND cfs.candidate_id = ?
+          LEFT JOIN form_submission_versions fsv
+            ON fsv.candidate_form_submission_id = cfs.id
+            AND fsv.version_no = cfs.current_version_no
+          LEFT JOIN files submitted_file ON submitted_file.id = fsv.file_id
+          WHERE cf.course_id = ?
+            AND cf.deleted_at IS NULL
+            AND template_file.deleted_at IS NULL
+          ORDER BY cf.display_order, cf.created_at
+        `,
+        [selfCandidate.id, courseId]
+      );
+
+      [selfCandidateAttachments] = await pool.execute(
+        `
+          SELECT ca.id, ca.attachment_type, ca.note, f.original_name, f.storage_key
+          FROM candidate_attachments ca
+          INNER JOIN files f ON f.id = ca.file_id
+          WHERE ca.candidate_id = ?
+            AND ca.deleted_at IS NULL
+            AND f.deleted_at IS NULL
+          ORDER BY ca.created_at DESC
+        `,
+        [selfCandidate.id]
+      );
+    }
 
     /*
       فقط الدورات التدريبية تسمح باختيار موظفين.
@@ -537,11 +568,27 @@ async function getCourse(req, res) {
           courseId
         );
 
-    const submissionLocked = isMission || nominations.length > 0;
+    const nominationLimit = Number(
+      allocationRows[0]?.nomination_limit || 0
+    );
+    const nominationsCount = Number(
+      allocationRows[0]?.nominations_count || 0
+    );
+    const deadlinePassed = course.nomination_deadline
+      ? new Date(course.nomination_deadline).setHours(23, 59, 59, 999) < Date.now()
+      : true;
+    const submissionLocked =
+      isMission ||
+      course.status !== 'OPEN_FOR_NOMINATION' ||
+      deadlinePassed ||
+      nominationsCount >= nominationLimit ||
+      availableEmployees.length === 0;
 
+    const [courseWithReport] = await attachFinalReports(pool, [course]);
     return res.json({
       department,
       course,
+      final_report: courseWithReport.final_report,
 
       /*
         يستعمله الـ JavaScript لإخفاء كل أزرار الترشيح
@@ -550,13 +597,9 @@ async function getCourse(req, res) {
       read_only: isMission,
 
       departmentAllocation: {
-        nomination_limit: Number(
-          allocationRows[0]?.nomination_limit || 0
-        ),
+        nomination_limit: nominationLimit,
 
-        nominations_count: Number(
-          allocationRows[0]?.nominations_count || 0
-        ),
+        nominations_count: nominationsCount,
       },
 
       submission_locked: submissionLocked,
@@ -567,19 +610,33 @@ async function getCourse(req, res) {
 
       nominations,
 
-      selfCandidate: isMission
-        ? false
-        : Boolean(selfCandidateRows[0]?.self_candidate),
+      participants_only: isMission || isClosedCourse,
+
+      selfCandidate: Boolean(selfCandidate),
+
+      selfParticipation: selfCandidate
+        ? { type: 'CANDIDATE', status: selfCandidate.status }
+        : selfNomination
+          ? { type: 'NOMINATION', status: selfNomination.status }
+          : null,
 
       /*
         لا نعرض استمارات شخصية لمدير القسم داخل المهمة.
       */
-      selfCourseForms: isMission
-        ? []
-        : courseForms.map((form) => ({
+      selfCourseForms: selfCandidate
+        ? selfForms.map((form) => ({
             ...form,
-            template_file_url: toFileUrl(form.storage_key),
-          })),
+            template_file_url: toFileUrl(form.template_storage_key),
+            submitted_file_url: form.submitted_storage_key
+              ? toFileUrl(form.submitted_storage_key)
+              : null,
+          }))
+        : [],
+
+      selfCandidateAttachments: selfCandidateAttachments.map((attachment) => ({
+        ...attachment,
+        file_url: toFileUrl(attachment.storage_key),
+      })),
 
       attachments: attachments.map((attachment) => ({
         ...attachment,

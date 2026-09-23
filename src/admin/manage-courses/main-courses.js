@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
 import {
   api,
   escapeHtml,
@@ -19,6 +20,9 @@ const logoutButton = document.querySelector('#logoutButton');
 function statusClass(status) {
   const classes = {
     ACTIVE: 'bg-brand-lightGold text-brand-darkGold',
+    OPEN_FOR_NOMINATION: 'bg-brand-lightGold text-brand-darkGold',
+    NOMINATION_CLOSED: 'bg-amber-50 text-amber-700',
+    CANDIDATE_PROCESSING: 'bg-violet-50 text-violet-700',
     DRAFT: 'bg-slate-100 text-slate-600',
     COMPLETED: 'bg-emerald-50 text-emerald-700',
     ARCHIVED: 'bg-blue-50 text-blue-700',
@@ -41,8 +45,10 @@ function renderCourses(courses) {
   grid.innerHTML = courses.map((course) => `
     <a
       href="./manage-course.html?id=${course.id}"
-      class="group block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-sm"
+      class="group block rounded-xl border border-slate-200 bg-white p-5 transition hover:border-brand-gold hover:shadow-md"
     >
+      <article class="flex h-full flex-col justify-between">
+        <div>
       <div class="flex items-center justify-between gap-3">
         <span class="rounded-lg px-2.5 py-1 text-[11px] font-bold ${statusClass(course.status)}">
           ${courseStatusText(course.status)}
@@ -57,13 +63,14 @@ function renderCourses(courses) {
         ${course.course_type === 'MISSION' ? 'مهمة' : 'دورة تدريبية'}
       </p>
 
-      <h4 class="mt-1 text-sm font-bold text-slate-900">
+      <h4 class="mt-1 text-sm font-bold text-slate-900 transition group-hover:text-brand-gold">
         ${escapeHtml(course.title)}
       </h4>
 
       <p class="mt-2 line-clamp-2 text-xs leading-6 text-slate-500">
         ${escapeHtml(course.description || 'لا يوجد وصف للدورة.')}
       </p>
+        </div>
 
       <div class="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">
         <span class="text-[11px] text-slate-500">
@@ -74,6 +81,7 @@ function renderCourses(courses) {
           التفاصيل ←
         </span>
       </div>
+      </article>
     </a>
   `).join('');
 }
@@ -97,15 +105,9 @@ async function loadCourses() {
 
   try {
     const data = await api(`/api/courses?${params.toString()}`);
-    let courses = data.courses || [];
-
-    // **الحل السحري هنا:** استبعاد المؤرشف والملغي تلقائياً من هذه الصفحة
-    // ما لم يكن المستخدم قد اختارهم صراحة من قائمة الفلتر المنسدلة
-    if (!statusFilter.value) {
-      courses = courses.filter(
-        (course) => course.status !== 'ARCHIVED' && course.status !== 'CANCELLED'
-      );
-    }
+    const courses = (data.courses || []).filter(
+      (course) => course.status !== 'ARCHIVED' && course.status !== 'CANCELLED'
+    );
 
     countText.textContent = `إجمالي الدورات: ${courses.length}`;
     renderCourses(courses);
@@ -124,6 +126,7 @@ form.addEventListener('submit', (event) => {
   event.preventDefault();
   loadCourses();
 });
+bindLiveFilters('#coursesFiltersForm', loadCourses);
 
 resetButton.addEventListener('click', () => {
   form.reset();

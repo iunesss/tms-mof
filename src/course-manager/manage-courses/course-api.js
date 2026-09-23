@@ -36,31 +36,7 @@ export function formatDate(value) {
   }).format(new Date(value));
 }
 
-export function courseStatusText(status) {
-  const statuses = {
-    DRAFT: 'مسودة',
-    ACTIVE: 'نشطة',
-    COMPLETED: 'مكتملة',
-    ARCHIVED: 'مؤرشفة',
-    CANCELLED: 'ملغاة',
-  };
-
-  return statuses[status] || status || '—';
-}
-
-export function candidateStatusText(status) {
-  const statuses = {
-    SELECTED: 'تم الاختيار',
-    DOCUMENTS_PENDING: 'بانتظار المستندات',
-    DOCUMENTS_UNDER_REVIEW: 'تحت مراجعة المستندات',
-    PRELIMINARILY_ACCEPTED: 'مقبول مبدئيًا',
-    CONFIRMED: 'مؤكد',
-    REJECTED: 'مرفوض نهائيًا',
-    CANCELLED: 'ملغى',
-  };
-
-  return statuses[status] || status || '—';
-}
+export { courseStatusText, candidateStatusText } from '../../shared/status-labels.js';
 
 export async function logout() {
   try {

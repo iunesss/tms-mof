@@ -16,6 +16,8 @@ const router = express.Router();
 const loginLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
   max: 10,
+  // الطلب الناجح لا يُعد محاولة فاشلة ولا يقلل حصة المستخدم.
+  skipSuccessfulRequests: true,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

@@ -1,4 +1,6 @@
 import { protectPage } from '../shared/auth-guard.js';
+import { bindLiveFilters } from '../shared/live-filters.js';
+import { courseStatusText } from '../shared/status-labels.js';
 
 function escapeHtml(value = '') {
   return String(value ?? '')
@@ -71,25 +73,24 @@ function renderArchive(courses) {
 
       <td class="px-5 py-3">
         <span class="rounded-lg bg-slate-100 px-2 py-1 text-[10px] font-bold text-slate-600">
-          ${course.status === 'ARCHIVED' ? 'مؤرشفة' : 'مكتملة'}
+          ${courseStatusText(course.status)}
         </span>
       </td>
 
       <td class="px-5 py-3">
-        <a href="./course-info.html?id=${encodeURIComponent(course.id)}" class="text-[11px] font-bold text-brand-darkGold hover:underline">
-          عرض التفاصيل ←
+        <a href="./course-info.html?id=${encodeURIComponent(course.id)}&from=archive" class="inline-block rounded-lg border border-brand-gold px-3 py-1.5 text-[11px] font-bold text-brand-darkGold transition hover:bg-brand-lightGold">
+          عرض التفاصيل
         </a>
+        ${course.final_report?.file_url ? `<a href="${escapeHtml(course.final_report.file_url)}" target="_blank" rel="noopener" class="mr-2 inline-block rounded-lg border border-slate-300 px-3 py-1.5 text-[11px] font-bold text-slate-700 transition hover:bg-slate-50">عرض التقرير</a>` : '<span class="mr-2 inline-block rounded-lg border border-slate-200 px-3 py-1.5 text-[11px] font-semibold text-slate-400">لا يوجد تقرير</span>'}
       </td>
     </tr>
   `).join('');
 }
 
-async function initialize() {
-  const user = await protectPage(['EMPLOYEE']);
-  if (!user) return;
-
+async function loadArchive() {
   try {
-    const data = await api('/api/courses/archive');
+    const search = document.querySelector('#archiveSearch').value.trim();
+    const data = await api(`/api/courses/archive?search=${encodeURIComponent(search)}`);
     renderArchive(data.courses || []);
   } catch (error) {
     document.querySelector('#archiveTableBody').innerHTML = `
@@ -100,6 +101,13 @@ async function initialize() {
       </tr>
     `;
   }
+}
+
+async function initialize() {
+  const user = await protectPage(['EMPLOYEE']);
+  if (!user) return;
+  bindLiveFilters('main', loadArchive);
+  await loadArchive();
 }
 
 initialize();

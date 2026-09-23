@@ -39,32 +39,7 @@ export function getQuery(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
-export function courseStatusText(status) {
-  const statuses = {
-    DRAFT: 'مسودة',
-    OPEN_FOR_NOMINATION: 'مفتوحة للترشيح',
-    NOMINATION_CLOSED: 'أُغلق الترشيح',
-    CANDIDATE_PROCESSING: 'قيد معالجة المرشحين',
-    ACTIVE: 'نشطة',
-    COMPLETED: 'مكتملة',
-    ARCHIVED: 'مؤرشفة',
-    CANCELLED: 'ملغاة',
-  };
-
-  return statuses[status] || status || '—';
-}
-
-export function nominationStatusText(status) {
-  const statuses = {
-    SUBMITTED: 'بانتظار مراجعة الوكيل',
-    AGENT_CONFIRMED: 'اعتمده الوكيل',
-    AGENT_REJECTED: 'رفضه الوكيل',
-    SELECTED: 'تم الاختيار',
-    WITHDRAWN: 'تم السحب',
-  };
-
-  return statuses[status] || status || '—';
-}
+export { courseStatusText, nominationStatusText } from '../shared/status-labels.js';
 
 export function setAgentIdentity(user) {
   const userName =

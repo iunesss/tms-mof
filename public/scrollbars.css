@@ -1,0 +1,57 @@
+/* نخفي شكل شريط تمرير الصفحة فقط؛ التمرير نفسه يظل متاحًا. */
+html,
+body {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+html::-webkit-scrollbar,
+body::-webkit-scrollbar {
+  display: none;
+}
+
+/*
+  ترفع قابلية القراءة في جميع الواجهات دون تغيير مقياس الصفحة كاملًا.
+  نكبر فقط أحجام Tailwind الصغيرة المستخدمة للنصوص المساندة.
+*/
+.text-\[9px\],
+.text-\[10px\] {
+  font-size: 0.75rem !important;
+  line-height: 1rem !important;
+}
+
+.text-\[11px\] {
+  font-size: 0.8125rem !important;
+  line-height: 1.125rem !important;
+}
+
+.text-xs {
+  font-size: 0.875rem !important;
+  line-height: 1.25rem !important;
+}
+
+.text-sm {
+  font-size: 0.9375rem !important;
+  line-height: 1.375rem !important;
+}
+
+/*
+  يوحّد عرض محتوى الصفحات والشريط العلوي على الشاشات الكبيرة، مع إبقاء
+  الهوامش الداخلية التي تحددها كل واجهة للموبايل والتابلت كما هي.
+*/
+:root {
+  --app-content-width: min(92%, 1440px);
+}
+
+body > main,
+body > nav > div:first-child,
+body > header > div:first-child {
+  width: var(--app-content-width);
+  margin-inline: auto;
+}
+
+@media (max-width: 767px) {
+  :root {
+    --app-content-width: 100%;
+  }
+}

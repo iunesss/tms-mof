@@ -129,6 +129,11 @@
             class="w-full rounded-lg border border-slate-300 bg-white px-3 py-2.5 text-xs outline-none transition focus:border-brand-gold"
           >
             <option value="">كل الحالات</option>
+            <option value="DRAFT">مسودة</option>
+            <option value="OPEN_FOR_NOMINATION">مفتوحة للترشيح</option>
+            <option value="NOMINATION_CLOSED">أُغلق الترشيح</option>
+            <option value="CANDIDATE_PROCESSING">معالجة المرشحين</option>
+            <option value="ACTIVE">نشطة</option>
             <option value="COMPLETED">مكتملة</option>
             <option value="ARCHIVED">مؤرشفة</option>
             <option value="CANCELLED">ملغاة</option>
@@ -158,13 +163,6 @@
           مسح الفلاتر
         </button>
 
-        <button
-          id="searchArchiveButton"
-          type="button"
-          class="rounded-lg bg-brand-gold px-4 py-2 text-xs font-bold text-white transition hover:bg-brand-darkGold"
-        >
-          تطبيق البحث
-        </button>
       </div>
     </section>
 
@@ -189,9 +187,7 @@
               <th class="px-5 py-3 font-medium">رقم الدورة</th>
               <th class="px-5 py-3 font-medium">اسم الدورة أو المهمة</th>
               <th class="px-5 py-3 font-medium">النوع</th>
-              <th class="px-5 py-3 font-medium">الجهة التدريبية</th>
               <th class="px-5 py-3 font-medium">الفترة</th>
-              <th class="px-5 py-3 font-medium">المشاركون</th>
               <th class="px-5 py-3 font-medium">الحالة</th>
               <th class="px-5 py-3 font-medium">الإجراء</th>
             </tr>
@@ -199,7 +195,7 @@
 
           <tbody id="archiveCoursesTableBody" class="divide-y divide-slate-100">
             <tr>
-              <td colspan="8" class="px-5 py-10 text-center text-xs text-slate-400">
+              <td colspan="6" class="px-5 py-10 text-center text-xs text-slate-400">
                 جارٍ تحميل أرشيف الدورات والمهام...
               </td>
             </tr>

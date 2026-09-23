@@ -1,4 +1,5 @@
 import { protectPage } from '../../shared/auth-guard.js';
+import { bindLiveFilters } from '../../shared/live-filters.js';
 import {
   api,
   escapeHtml,
@@ -168,11 +169,6 @@ async function loadEventTypes() {
   `;
 }
 
-document.querySelector('#searchAuditLogsButton').addEventListener('click', () => {
-  state.page = 1;
-  loadLogs();
-});
-
 document.querySelector('#clearAuditFiltersButton').addEventListener('click', () => {
   document.querySelector('#auditSearch').value = '';
   document.querySelector('#auditEventType').value = '';
@@ -205,6 +201,11 @@ document.querySelector('#closeAuditDetailsModalButton').addEventListener('click'
 async function initialize() {
   const session = await protectPage(['SUPER_ADMIN']);
   if (!session) return;
+
+  bindLiveFilters('main', () => {
+    state.page = 1;
+    loadLogs();
+  });
 
   await loadEventTypes();
   await loadLogs();

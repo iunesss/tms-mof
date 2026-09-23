@@ -35,7 +35,7 @@
 
   <header class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-brand-navy text-white shadow-lg">
     <div class="mx-auto flex h-16 max-w-[92%] items-center justify-between px-4 sm:px-6">
-      <a href="./main-courses.html" class="flex items-center gap-2.5">
+      <a id="backToCoursesLogo" href="./main-courses.html" class="flex items-center gap-2.5">
         <div class="flex h-9 w-9 items-center justify-center overflow-hidden rounded-lg bg-white shadow-md">
           <img src="/favicon.png" alt="شعار النظام" class="h-full w-full object-contain p-1" />
         </div>
@@ -46,7 +46,7 @@
         </div>
       </a>
 
-      <a href="./main-courses.html" class="rounded-lg border border-slate-600 px-3 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
+      <a id="backToCoursesButton" href="./main-courses.html" class="rounded-lg border border-slate-600 px-3 py-1.5 text-[11px] font-semibold text-slate-200 transition hover:border-brand-gold hover:text-brand-gold">
         العودة إلى الدورات
       </a>
     </div>
@@ -94,7 +94,7 @@
       </div>
     </section>
 
-    <section class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+    <section id="agentNominationsSection" class="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
       <div class="flex flex-col gap-4 border-b border-slate-200 px-5 py-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h3 class="text-sm font-bold text-slate-900">ترشيحات مديري الأقسام</h3>
@@ -103,7 +103,7 @@
           </p>
         </div>
 
-        <div class="flex flex-wrap items-center gap-2">
+        <div id="nominationDecisionControls" class="flex flex-wrap items-center gap-2">
           <span id="selectedNominationsCount" class="rounded-lg bg-slate-100 px-3 py-2 text-[11px] font-semibold text-slate-600">
             لم يتم تحديد مرشحين
           </span>
@@ -155,6 +155,11 @@
           </tbody>
         </table>
       </div>
+    </section>
+
+    <section id="agentParticipantsSection" class="hidden rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+      <h3 class="border-b border-slate-200 pb-3 text-sm font-bold text-slate-900">الموظفون المشاركون من قطاعك</h3>
+      <div id="agentParticipantsList" class="mt-4 text-xs text-slate-600">جارٍ تحميل المشاركين...</div>
     </section>
 
     <section class="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
